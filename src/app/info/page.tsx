@@ -204,7 +204,7 @@ export default function InfoPage() {
       </div>
 
       {/* Footer Links */}
-      <div className="absolute bottom-4 left-4 flex gap-3">
+      <div className="fixed bottom-4 left-4 flex gap-3 z-10">
         <a
           href="https://github.com/ArjandenHartog/openfiles"
           target="_blank"

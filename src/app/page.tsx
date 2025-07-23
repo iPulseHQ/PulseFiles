@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, FileText, Mail, Clock, Lock, X, Zap, ChevronDown, ChevronUp, Settings, Github, Heart, User, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function Home() {
-  const { user, getUserDisplayName } = useAuth();
+  const { user, session, getUserDisplayName } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isFolder, setIsFolder] = useState(false);
@@ -55,6 +55,7 @@ export default function Home() {
   const [maxDownloads, setMaxDownloads] = useState<number | ''>('');
 
   const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
+    accessToken: session?.access_token,
     onError: (error) => {
       setMessage(`Error: ${error}`);
     },
@@ -68,6 +69,16 @@ export default function Home() {
       if (fileInput) fileInput.value = '';
     }
   });
+
+  // Auto-fill email for logged in users ONLY in "Generate Link Only" mode
+  useEffect(() => {
+    if (shareMode === 'link' && user?.email && (!recipients[0] || recipients[0].trim() === '')) {
+      setRecipients([user.email]);
+    } else if (shareMode === 'email') {
+      // Clear the first recipient when switching to email mode
+      setRecipients(['']);
+    }
+  }, [user?.email, shareMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -239,6 +250,12 @@ export default function Home() {
       });
 
       xhr.open('POST', '/api/upload');
+      
+      // Add authorization header if user is authenticated
+      if (session?.access_token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+      }
+      
       xhr.send(formData);
 
       setUploadProgress(80);
@@ -500,7 +517,7 @@ export default function Home() {
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              {shareMode === 'email' ? `Recipients (max 3)` : 'Your Email Address'}
+              {shareMode === 'email' ? `Recipients (max 3)` : user ? 'Confirmation Email' : 'Your Email Address'}
             </Label>
             
             {shareMode === 'email' ? (
@@ -548,52 +565,16 @@ export default function Home() {
                   type="email"
                   value={recipients[0]}
                   onChange={(e) => updateRecipient(0, e.target.value)}
-                  placeholder="Enter your email address"
+                  placeholder={user ? "example@domain.com" : "Enter your email address"}
                   disabled={uploading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  We&apos;ll send you a confirmation that the link has been generated
+                  {user ? "We'll send you a confirmation email with the share link" : "We'll send you a confirmation that the link has been generated"}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Title and Message */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-sm font-medium">
-                Title (Optional)
-              </Label>
-              <Input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter a title for your share"
-                disabled={uploading}
-                maxLength={100}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="message" className="text-sm font-medium">
-                Message (Optional)
-              </Label>
-              <textarea
-                id="message"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Add a personal message..."
-                disabled={uploading}
-                maxLength={500}
-                rows={3}
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
-              <p className="text-xs text-muted-foreground">
-                {messageText.length}/500 characters
-              </p>
-            </div>
-          </div>
 
           {/* Advanced Settings (Collapsible) */}
           <div className="space-y-2">
@@ -705,7 +686,7 @@ export default function Home() {
                         disabled={isCurrentlyUploading}
                       />
                       <Label htmlFor="access-public" className="text-sm">
-                        🌐 Public - Anyone with the link can access
+                        Public - Anyone with the link can access
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -719,7 +700,7 @@ export default function Home() {
                         disabled={isCurrentlyUploading}
                       />
                       <Label htmlFor="access-password" className="text-sm">
-                        🔐 Password Protected - Requires password to access
+                        Password Protected - Requires password to access
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -733,7 +714,7 @@ export default function Home() {
                         disabled={isCurrentlyUploading}
                       />
                       <Label htmlFor="access-authenticated" className="text-sm">
-                        👤 Authenticated Users Only - Requires account to access
+                        Authenticated Users Only - Requires account to access
                       </Label>
                     </div>
                   </div>
@@ -776,6 +757,42 @@ export default function Home() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Maximum number of times this file can be downloaded (leave empty for unlimited)
+                  </p>
+                </div>
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm font-medium">
+                    Title (Optional)
+                  </Label>
+                  <Input
+                    id="title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter a title for your share"
+                    disabled={isCurrentlyUploading}
+                    maxLength={100}
+                  />
+                </div>
+                
+                {/* Message */}
+                <div className="space-y-2">
+                  <Label htmlFor="message" className="text-sm font-medium">
+                    Message (Optional)
+                  </Label>
+                  <textarea
+                    id="message"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Add a personal message..."
+                    disabled={isCurrentlyUploading}
+                    maxLength={500}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {messageText.length}/500 characters
                   </p>
                 </div>
 

@@ -11,6 +11,7 @@ interface UploadProgress {
 interface ChunkedUploadOptions {
   chunkSize?: number;
   maxRetries?: number;
+  accessToken?: string;
   onProgress?: (progress: UploadProgress) => void;
   onError?: (error: string) => void;
   onSuccess?: (result: { shareUrl: string; expirationDate: string; message: string }) => void;
@@ -20,6 +21,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
   const {
     chunkSize = 5 * 1024 * 1024, // 5MB chunks
     maxRetries = 3,
+    accessToken,
     onProgress,
     onError,
     onSuccess
@@ -96,8 +98,14 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
         initFormData.append('customSlug', customSlug.trim());
       }
 
+      const initHeaders: Record<string, string> = {};
+      if (accessToken) {
+        initHeaders['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const initResponse = await fetch('/api/upload-chunk', {
         method: 'POST',
+        headers: initHeaders,
         body: initFormData,
       });
 
@@ -129,8 +137,14 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
             chunkFormData.append('chunkNumber', (chunkIndex + 1).toString());
             chunkFormData.append('chunk', chunk);
 
+            const chunkHeaders: Record<string, string> = {};
+            if (accessToken) {
+              chunkHeaders['Authorization'] = `Bearer ${accessToken}`;
+            }
+
             const chunkResponse = await fetch('/api/upload-chunk', {
               method: 'POST',
+              headers: chunkHeaders,
               body: chunkFormData,
             });
 
@@ -174,8 +188,14 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       completeFormData.append('action', 'complete');
       completeFormData.append('sessionId', newSessionId);
 
+      const completeHeaders: Record<string, string> = {};
+      if (accessToken) {
+        completeHeaders['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const completeResponse = await fetch('/api/upload-chunk', {
         method: 'POST',
+        headers: completeHeaders,
         body: completeFormData,
       });
 
@@ -195,8 +215,14 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
           const abortFormData = new FormData();
           abortFormData.append('action', 'abort');
           abortFormData.append('sessionId', sessionId);
+          const abortHeaders: Record<string, string> = {};
+          if (accessToken) {
+            abortHeaders['Authorization'] = `Bearer ${accessToken}`;
+          }
+
           await fetch('/api/upload-chunk', {
             method: 'POST',
+            headers: abortHeaders,
             body: abortFormData,
           });
         } catch (abortError) {
@@ -211,7 +237,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       setIsUploading(false);
       setSessionId(null);
     }
-  }, [chunkSize, maxRetries, onProgress, onError, onSuccess, sessionId]);
+  }, [chunkSize, maxRetries, accessToken, onProgress, onError, onSuccess, sessionId]);
 
   const abortUpload = useCallback(async () => {
     if (sessionId) {
@@ -219,8 +245,14 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
         const abortFormData = new FormData();
         abortFormData.append('action', 'abort');
         abortFormData.append('sessionId', sessionId);
+        const abortHeaders: Record<string, string> = {};
+        if (accessToken) {
+          abortHeaders['Authorization'] = `Bearer ${accessToken}`;
+        }
+
         await fetch('/api/upload-chunk', {
           method: 'POST',
+          headers: abortHeaders,
           body: abortFormData,
         });
         setIsUploading(false);
@@ -229,7 +261,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
         console.error('Failed to abort upload:', error);
       }
     }
-  }, [sessionId]);
+  }, [sessionId, accessToken]);
 
   return {
     uploadFile,

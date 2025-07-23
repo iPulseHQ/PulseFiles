@@ -411,7 +411,7 @@ export async function POST(request: NextRequest) {
             subject: title?.trim() || `File ready: ${sanitizedFileName}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-                <h2>${title?.trim() || (isFolder ? `📁 Folder shared: ${sanitizedFileName}` : `📄 File shared: ${sanitizedFileName}`)}</h2>
+                <h2>${title?.trim() || (isFolder ? `Folder shared: ${sanitizedFileName}` : `File shared: ${sanitizedFileName}`)}</h2>
                 
                 ${message?.trim() ? `
                   <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
@@ -421,13 +421,13 @@ export async function POST(request: NextRequest) {
                 
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
                   ${isFolder ? `
-                    <p style="margin: 0;"><strong>📁 Folder:</strong> ${sanitizedFileName}</p>
+                    <p style="margin: 0;"><strong>Folder:</strong> ${sanitizedFileName}</p>
                     <p style="margin: 5px 0 0 0; color: #666;"><strong>Files:</strong> ${files.length} files, ${formatFileSize(totalSize)}</p>
                   ` : `
-                    <p style="margin: 0;"><strong>📄 File:</strong> ${sanitizedFileName}</p>
+                    <p style="margin: 0;"><strong>File:</strong> ${sanitizedFileName}</p>
                     <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(totalSize)}</p>
                   `}
-                  ${accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>🔐 Password protected</strong></p>' : ''}
+                  ${accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                   ${maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${maxDownloads} times</p>` : ''}
                 </div>
                 
@@ -436,7 +436,7 @@ export async function POST(request: NextRequest) {
                      style="background-color: #007bff; color: white; padding: 12px 24px; 
                             text-decoration: none; border-radius: 5px; font-weight: bold; 
                             display: inline-block;">
-                    ${isFolder ? '📁 Download Folder' : '📄 Download File'}
+                    ${isFolder ? 'Download Folder' : 'Download File'}
                   </a>
                 </div>
                 
@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
           subject: `Share link generated: ${title?.trim() || sanitizedFileName}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-              <h2>🎉 Your share link has been generated!</h2>
+              <h2>Your share link has been generated!</h2>
               
               <p>Your ${isFolder ? 'folder' : 'file'} <strong>${title?.trim() || sanitizedFileName}</strong> has been uploaded successfully.</p>
               
@@ -477,38 +477,38 @@ export async function POST(request: NextRequest) {
               
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
                 ${isFolder ? `
-                  <p style="margin: 0;"><strong>📁 Folder:</strong> ${sanitizedFileName}</p>
+                  <p style="margin: 0;"><strong>Folder:</strong> ${sanitizedFileName}</p>
                   <p style="margin: 5px 0 0 0; color: #666;"><strong>Files:</strong> ${files.length} files, ${formatFileSize(totalSize)}</p>
                 ` : `
-                  <p style="margin: 0;"><strong>📄 File:</strong> ${sanitizedFileName}</p>
+                  <p style="margin: 0;"><strong>File:</strong> ${sanitizedFileName}</p>
                   <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(totalSize)}</p>
                 `}
-                ${accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>🔐 Password protected</strong></p>' : ''}
+                ${accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                 ${maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${maxDownloads} times</p>` : ''}
               </div>
               
               <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #bbdefb;">
-                <p style="margin: 0; font-weight: bold; color: #1976d2;">🔗 Share this link:</p>
+                <p style="margin: 0; font-weight: bold; color: #1976d2;">Share this link:</p>
                 <p style="margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 14px; color: #0d47a1; background: white; padding: 10px; border-radius: 3px;">
                   ${shareUrl}
                 </p>
                 <button onclick="navigator.clipboard.writeText('${shareUrl}')" style="background-color: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                  📋 Copy Link
+                  Copy Link
                 </button>
               </div>
               
               <p style="color: #666; font-size: 14px;">
-                ⏰ Link expires: ${expirationDate.toLocaleDateString()}
+                Link expires: ${expirationDate.toLocaleDateString()}
               </p>
               
               ${accessControl === 'password' ? `
                 <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
-                  <p style="margin: 0; color: #856404;"><strong>🔐 Password Protection:</strong> Recipients will need the password you set to access this ${isFolder ? 'folder' : 'file'}.</p>
+                  <p style="margin: 0; color: #856404;"><strong>Password Protection:</strong> Recipients will need the password you set to access this ${isFolder ? 'folder' : 'file'}.</p>
                 </div>
               ` : ''}
               
               <p style="color: #666; font-size: 12px; margin-top: 20px;">
-                💡 Copy and share this link with anyone you want to give access to your ${isFolder ? 'folder' : 'file'}.
+                Copy and share this link with anyone you want to give access to your ${isFolder ? 'folder' : 'file'}.
               </p>
               
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">

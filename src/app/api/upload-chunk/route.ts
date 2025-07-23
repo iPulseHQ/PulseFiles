@@ -87,6 +87,15 @@ export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
     
+    // Check if user is authenticated (optional)
+    let currentUser = null;
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      currentUser = user;
+    }
+    
     // Rate limiting - configurable for uploads
     const uploadRateLimit = parseInt(process.env.UPLOAD_RATE_LIMIT_MAX || '100');
     if (!checkRateLimit(`chunk_${clientIP}`, uploadRateLimit, 60000)) {
@@ -355,6 +364,7 @@ export async function POST(request: NextRequest) {
         .from('shared_files')
         .insert({
           id: session.shareId,
+          user_id: currentUser?.id || null,
           file_name: originalFileName,
           encrypted_filename: encryptedFilename,
           filename_salt: filenameSalt,
@@ -404,7 +414,7 @@ export async function POST(request: NextRequest) {
               subject: session.title || `File ready: ${originalFileName}`,
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-                  <h2>${session.title || `📄 File shared: ${originalFileName}`}</h2>
+                  <h2>${session.title || `File shared: ${originalFileName}`}</h2>
                   
                   ${session.message ? `
                     <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
@@ -413,9 +423,9 @@ export async function POST(request: NextRequest) {
                   ` : ''}
                   
                   <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>📄 File:</strong> ${originalFileName}</p>
+                    <p style="margin: 0;"><strong>File:</strong> ${originalFileName}</p>
                     <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(session.fileSize)}</p>
-                    ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>🔐 Password protected</strong></p>' : ''}
+                    ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                     ${session.maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${session.maxDownloads} times</p>` : ''}
                   </div>
                   
@@ -424,7 +434,7 @@ export async function POST(request: NextRequest) {
                        style="background-color: #007bff; color: white; padding: 12px 24px; 
                               text-decoration: none; border-radius: 5px; font-weight: bold; 
                               display: inline-block;">
-                      📄 Download File
+                      Download File
                     </a>
                   </div>
                   
@@ -452,7 +462,7 @@ export async function POST(request: NextRequest) {
             subject: `Share link generated: ${session.title || originalFileName}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-                <h2>🎉 Your share link has been generated!</h2>
+                <h2>Your share link has been generated!</h2>
                 
                 <p>Your file <strong>${session.title || originalFileName}</strong> has been uploaded successfully.</p>
                 
@@ -464,34 +474,34 @@ export async function POST(request: NextRequest) {
                 ` : ''}
                 
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 0;"><strong>📄 File:</strong> ${originalFileName}</p>
+                  <p style="margin: 0;"><strong>File:</strong> ${originalFileName}</p>
                   <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(session.fileSize)}</p>
-                  ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>🔐 Password protected</strong></p>' : ''}
+                  ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                   ${session.maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${session.maxDownloads} times</p>` : ''}
                 </div>
                 
                 <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #bbdefb;">
-                  <p style="margin: 0; font-weight: bold; color: #1976d2;">🔗 Share this link:</p>
+                  <p style="margin: 0; font-weight: bold; color: #1976d2;">Share this link:</p>
                   <p style="margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 14px; color: #0d47a1; background: white; padding: 10px; border-radius: 3px;">
                     ${shareUrl}
                   </p>
                   <button onclick="navigator.clipboard.writeText('${shareUrl}')" style="background-color: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                    📋 Copy Link
+                    Copy Link
                   </button>
                 </div>
                 
                 <p style="color: #666; font-size: 14px;">
-                  ⏰ Link expires: ${session.expirationDate.toLocaleDateString()}
+                  Link expires: ${session.expirationDate.toLocaleDateString()}
                 </p>
                 
                 ${session.accessControl === 'password' ? `
                   <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
-                    <p style="margin: 0; color: #856404;"><strong>🔐 Password Protection:</strong> Recipients will need the password you set to access this file.</p>
+                    <p style="margin: 0; color: #856404;"><strong>Password Protection:</strong> Recipients will need the password you set to access this file.</p>
                   </div>
                 ` : ''}
                 
                 <p style="color: #666; font-size: 12px; margin-top: 20px;">
-                  💡 Copy and share this link with anyone you want to give access to your file.
+                  Copy and share this link with anyone you want to give access to your file.
                 </p>
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">

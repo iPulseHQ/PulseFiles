@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Download, Loader2, Lock, User, Eye, EyeOff, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,22 @@ export default function DownloadSection({ shareId, accessControl, isFolder }: Do
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [passwordRequired] = useState(accessControl === 'password');
+  const [copyFeedback, setCopyFeedback] = useState('');
+
+  const copyShareUrl = async () => {
+    // Use environment variable for production URL, fallback to current origin for development
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const shareUrl = `${baseUrl}/download/${shareId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopyFeedback('URL copied to clipboard!');
+      setTimeout(() => setCopyFeedback(''), 3000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+      setCopyFeedback('Failed to copy URL');
+      setTimeout(() => setCopyFeedback(''), 3000);
+    }
+  };
 
   const handleSecureDownload = async () => {
     try {
@@ -158,6 +174,25 @@ export default function DownloadSection({ shareId, accessControl, isFolder }: Do
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Copy URL feedback */}
+      {copyFeedback && (
+        <Alert>
+          <AlertDescription>{copyFeedback}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Copy URL button */}
+      <Button 
+        variant="outline"
+        className="w-full" 
+        size="lg"
+        onClick={copyShareUrl}
+        disabled={isDownloading}
+      >
+        <Copy className="mr-2 h-4 w-4" />
+        Copy URL
+      </Button>
 
       {/* Download button */}
       <Button 

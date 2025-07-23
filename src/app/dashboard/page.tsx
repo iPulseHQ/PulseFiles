@@ -81,9 +81,17 @@ export default function DashboardPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const copyShareUrl = (fileId: string) => {
-    const shareUrl = `${window.location.origin}/download/${fileId}`;
-    navigator.clipboard.writeText(shareUrl);
+  const copyShareUrl = async (fileId: string) => {
+    // Use environment variable for production URL, fallback to current origin for development
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const shareUrl = `${baseUrl}/download/${fileId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      // You could add a toast notification here
+      console.log('Share URL copied to clipboard');
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+    }
   };
 
   const isExpired = (expiresAt: string) => {
