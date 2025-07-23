@@ -87,6 +87,15 @@ export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
     
+    // Check if user is authenticated (optional)
+    let currentUser = null;
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      currentUser = user;
+    }
+    
     // Rate limiting - configurable for uploads
     const uploadRateLimit = parseInt(process.env.UPLOAD_RATE_LIMIT_MAX || '100');
     if (!checkRateLimit(`chunk_${clientIP}`, uploadRateLimit, 60000)) {
@@ -355,6 +364,7 @@ export async function POST(request: NextRequest) {
         .from('shared_files')
         .insert({
           id: session.shareId,
+          user_id: currentUser?.id || null,
           file_name: originalFileName,
           encrypted_filename: encryptedFilename,
           filename_salt: filenameSalt,
