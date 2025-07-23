@@ -1,7 +1,7 @@
 import { randomBytes, createCipheriv, createDecipheriv, scryptSync, createHash } from 'crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
-import { Redis } from 'ioredis';
 
 // Generate cryptographically secure share ID (64 characters long)
 export function generateSecureShareId(): string {
@@ -290,59 +290,19 @@ export function isFileExpired(createdAt: string, expirationDate?: string): boole
   return new Date() > new Date(expirationDate);
 }
 
-// Rate limiting with Redis support
-interface RateLimitStore {
-  get(key: string): Promise<{ count: number; resetTime: number } | null>;
-  set(key: string, value: { count: number; resetTime: number }): Promise<void>;
-}
-
-// In-memory fallback (not recommended for production)
+// Simple rate limiting - in-memory for development, database for production
 const inMemoryStore = new Map<string, { count: number; resetTime: number }>();
 
-const memoryRateLimitStore: RateLimitStore = {
-  async get(key: string) {
-    return inMemoryStore.get(key) || null;
-  },
-  async set(key: string, value: { count: number; resetTime: number }) {
-    inMemoryStore.set(key, value);
-  }
-};
-
-let rateLimitStore: RateLimitStore = memoryRateLimitStore;
-
-// Initialize Redis if available
-let redisRateLimitStore: RateLimitStore | null = null;
-
-if (process.env.REDIS_URL) {
-  try {
-    const redis = new Redis(process.env.REDIS_URL);
-    
-    redisRateLimitStore = {
-      async get(key: string) {
-        const data = await redis.get(`rate_limit:${key}`);
-        return data ? JSON.parse(data) : null;
-      },
-      async set(key: string, value: { count: number; resetTime: number }) {
-        const ttl = Math.max(1, Math.ceil((value.resetTime - Date.now()) / 1000));
-        await redis.setex(`rate_limit:${key}`, ttl, JSON.stringify(value));
-      }
-    };
-    
-    rateLimitStore = redisRateLimitStore;
-  } catch {
-  }
-}
-
-export async function checkRateLimit(
+export function checkRateLimit(
   ip: string, 
   maxRequests: number = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10'), 
   windowMs: number = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000')
-): Promise<boolean> {
+): boolean {
   const now = Date.now();
-  const userLimit = await rateLimitStore.get(ip);
+  const userLimit = inMemoryStore.get(ip);
   
   if (!userLimit || now > userLimit.resetTime) {
-    await rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    inMemoryStore.set(ip, { count: 1, resetTime: now + windowMs });
     return true;
   }
   
@@ -350,7 +310,57 @@ export async function checkRateLimit(
     return false;
   }
   
-  await rateLimitStore.set(ip, { count: userLimit.count + 1, resetTime: userLimit.resetTime });
+  inMemoryStore.set(ip, { count: userLimit.count + 1, resetTime: userLimit.resetTime });
+  return true;
+}
+
+// Database-based rate limiting for production (optional enhancement)
+export async function checkRateLimitDB(
+  supabase: SupabaseClient,
+  ip: string,
+  maxRequests: number = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10'),
+  windowMs: number = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000')
+): Promise<boolean> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowMs);
+  const ipHash = hashIP(ip);
+  
+  // Clean up old entries
+  await supabase
+    .from('rate_limits')
+    .delete()
+    .lt('reset_time', windowStart.toISOString());
+  
+  // Get current count
+  const { data: existing } = await supabase
+    .from('rate_limits')
+    .select('count, reset_time')
+    .eq('ip_hash', ipHash)
+    .gte('reset_time', windowStart.toISOString())
+    .single();
+  
+  if (!existing) {
+    // First request in window
+    await supabase
+      .from('rate_limits')
+      .upsert({
+        ip_hash: ipHash,
+        count: 1,
+        reset_time: new Date(now.getTime() + windowMs).toISOString()
+      });
+    return true;
+  }
+  
+  if (existing.count >= maxRequests) {
+    return false;
+  }
+  
+  // Increment count
+  await supabase
+    .from('rate_limits')
+    .update({ count: existing.count + 1 })
+    .eq('ip_hash', ipHash);
+    
   return true;
 }
 

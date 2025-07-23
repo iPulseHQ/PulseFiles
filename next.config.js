@@ -3,6 +3,31 @@ const nextConfig = {
   // Enable large file uploads
   experimental: {
     largePageDataBytes: 128 * 1000, // 128KB
+    clientTraceMetadata: false, // Disable to reduce warnings
+  },
+  // Webpack optimization to reduce bundle size warnings
+  webpack: (config, { isServer }) => {
+    // Optimize bundle splitting
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks.cacheGroups,
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            maxSize: 200000, // 200KB chunks
+          },
+        },
+      };
+    }
+    
+    // Reduce string serialization warnings
+    config.optimization.usedExports = true;
+    config.optimization.sideEffects = false;
+    
+    return config;
   },
   async headers() {
     return [

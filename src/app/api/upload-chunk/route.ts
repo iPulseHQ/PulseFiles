@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     
     // Rate limiting - configurable for uploads
     const uploadRateLimit = parseInt(process.env.UPLOAD_RATE_LIMIT_MAX || '100');
-    if (!(await checkRateLimit(`chunk_${clientIP}`, uploadRateLimit, 60000))) {
+    if (!checkRateLimit(`chunk_${clientIP}`, uploadRateLimit, 60000)) {
       return NextResponse.json(
         { error: 'Too many upload requests. Please slow down.' },
         { status: 429 }

@@ -94,7 +94,7 @@ async function handleDownloadRequest(
 
     // Rate limiting - configurable downloads per IP
     const downloadRateLimit = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10');
-    if (!(await checkRateLimit(`download_${clientIP}`, downloadRateLimit, 60000))) {
+    if (!checkRateLimit(`download_${clientIP}`, downloadRateLimit, 60000)) {
       return NextResponse.json(
         { error: 'Too many download attempts. Please try again later.' },
         { status: 429 }
