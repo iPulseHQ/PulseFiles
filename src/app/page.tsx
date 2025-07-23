@@ -53,6 +53,7 @@ export default function Home() {
   const [accessControl, setAccessControl] = useState<AccessControl>('public');
   const [password, setPassword] = useState('');
   const [maxDownloads, setMaxDownloads] = useState<number | ''>('');
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
     accessToken: session?.access_token,
@@ -62,6 +63,7 @@ export default function Home() {
     onSuccess: (result) => {
       setMessage(result.message);
       setShareUrl(result.shareUrl);
+      setUrlCopied(false);
       // Clear form
       setFile(null);
       setEmail('');
@@ -273,6 +275,7 @@ export default function Home() {
         setUploadStatus(shareMode === 'email' ? 'Upload complete!' : 'Link generated!');
         setMessage(result.message);
         setShareUrl(result.shareUrl);
+        setUrlCopied(false);
         
         // Clear form
         setFile(null);
@@ -917,10 +920,18 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigator.clipboard.writeText(shareUrl)}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 2000);
+                      } catch (err) {
+                        console.error('Failed to copy URL:', err);
+                      }
+                    }}
                     className="text-xs"
                   >
-                    Copy URL
+                    {urlCopied ? 'URL Copied!' : 'Copy URL'}
                   </Button>
                 </div>
               </div>

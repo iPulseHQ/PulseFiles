@@ -17,6 +17,9 @@
     },
     "src/app/api/upload-chunk/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/manifest.ts": {
+      "maxDuration": 10
     }
   }
 }
