@@ -39,30 +39,10 @@ export function isValidRedirectUrl(url: string, allowedDomains: string[] = []): 
   }
 }
 
-// Generate Content Security Policy header
+// Generate Content Security Policy header (disabled - using next.config.js instead)
 export function generateCSPHeader(nonce?: string): string {
-  // In development, we need 'unsafe-eval' for hot reloading and Turbopack
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  const baseCSP = [
-    "default-src 'self'",
-    isDevelopment 
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" // Development: allow eval for hot reload
-      : "style-src 'self' 'unsafe-inline'", // Production: no eval
-    "style-src 'self' 'unsafe-inline'", // Needed for Tailwind
-    "img-src 'self' data: https:",
-    "font-src 'self' https:",
-    "connect-src 'self' ws: wss:", // Allow WebSocket for dev server
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'"
-  ];
-  
-  if (nonce && !isDevelopment) {
-    baseCSP[1] = `script-src 'self' 'nonce-${nonce}'`;
-  }
-  
-  return baseCSP.join('; ');
+  // CSP is now configured in next.config.js to avoid conflicts
+  return "";
 }
 
 // Security headers helper
