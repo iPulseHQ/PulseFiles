@@ -29,8 +29,8 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 # S3 Storage Configuration 
 DO_REGION=us-east-1
 DO_ENDPOINT=your_endpoint
-DO_ACCESS_TOKEN=your_wasabi_access_key
-DO_SECRET_KEY=your_wasabi_secret_key
+DO_ACCESS_TOKEN=your_access_key
+DO_SECRET_KEY=your_secret_key
 DO_BUCKET_NAME=your_bucket_name
 
 # Application Configuration
@@ -52,8 +52,7 @@ UPLOAD_RATE_LIMIT_MAX=100
 - Enable authentication providers as needed
 - Get your project URL and API keys from the dashboard
 
-### 2. S3 Storage Setup (Wasabi)
-- Create a Wasabi account
+### 2. S3 Storage Setup 
 - Create a new bucket
 - Generate access keys with appropriate permissions
 - Configure CORS if needed for direct uploads
