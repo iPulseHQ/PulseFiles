@@ -1,6 +1,7 @@
 import { randomBytes, createCipheriv, createDecipheriv, scryptSync, createHash } from 'crypto';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
+import { Redis } from 'ioredis';
 
 // Generate cryptographically secure share ID (64 characters long)
 export function generateSecureShareId(): string {
@@ -307,15 +308,28 @@ const memoryRateLimitStore: RateLimitStore = {
   }
 };
 
-const rateLimitStore: RateLimitStore = memoryRateLimitStore;
+let rateLimitStore: RateLimitStore = memoryRateLimitStore;
 
 // Initialize Redis if available
+let redisRateLimitStore: RateLimitStore | null = null;
+
 if (process.env.REDIS_URL) {
   try {
-    // Redis implementation would go here
-    console.log('Redis rate limiting not implemented yet - using in-memory store');
+    const redis = new Redis(process.env.REDIS_URL);
+    
+    redisRateLimitStore = {
+      async get(key: string) {
+        const data = await redis.get(`rate_limit:${key}`);
+        return data ? JSON.parse(data) : null;
+      },
+      async set(key: string, value: { count: number; resetTime: number }) {
+        const ttl = Math.max(1, Math.ceil((value.resetTime - Date.now()) / 1000));
+        await redis.setex(`rate_limit:${key}`, ttl, JSON.stringify(value));
+      }
+    };
+    
+    rateLimitStore = redisRateLimitStore;
   } catch {
-    console.warn('Failed to connect to Redis, using in-memory rate limiting');
   }
 }
 
