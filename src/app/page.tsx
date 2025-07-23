@@ -53,6 +53,7 @@ export default function Home() {
   const [accessControl, setAccessControl] = useState<AccessControl>('public');
   const [password, setPassword] = useState('');
   const [maxDownloads, setMaxDownloads] = useState<number | ''>('');
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
     accessToken: session?.access_token,
@@ -62,6 +63,7 @@ export default function Home() {
     onSuccess: (result) => {
       setMessage(result.message);
       setShareUrl(result.shareUrl);
+      setUrlCopied(false);
       // Clear form
       setFile(null);
       setEmail('');
@@ -273,6 +275,7 @@ export default function Home() {
         setUploadStatus(shareMode === 'email' ? 'Upload complete!' : 'Link generated!');
         setMessage(result.message);
         setShareUrl(result.shareUrl);
+        setUrlCopied(false);
         
         // Clear form
         setFile(null);
@@ -352,60 +355,62 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
       {/* Header Navigation */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between">
         {/* Left side - Navigation */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           <Link href="/info">
-            <Button variant="ghost" size="sm">
-              <Info className="h-4 w-4 mr-2" />
-              Info
+            <Button variant="ghost" size="sm" className="px-2 sm:px-3">
+              <Info className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Info</span>
             </Button>
           </Link>
         </div>
         
         {/* Right side - User & Theme */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           {user ? (
             <>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
                 {getUserDisplayName()}
               </span>
               <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  <User className="h-4 w-4 mr-2" />
-                  My Files
+                <Button variant="outline" size="sm" className="px-2 sm:px-3">
+                  <User className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">My Files</span>
                 </Button>
               </Link>
             </>
           ) : (
             <Link href="/auth">
-              <Button variant="outline" size="sm">
-                <User className="h-4 w-4 mr-2" />
-                Sign In
+              <Button variant="outline" size="sm" className="px-2 sm:px-3">
+                <User className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign In</span>
               </Button>
             </Link>
           )}
           <ThemeToggle />
         </div>
       </div>
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg mx-auto">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
             <Upload className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">OpenFiles</CardTitle>
-          <CardDescription>
-            Upload a file and get a secure sharing link
+          <CardTitle className="text-2xl sm:text-2xl">OpenFiles</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            <span className="hidden sm:inline">Upload a file and get a secure sharing link</span>
+            <span className="sm:hidden">Secure file sharing</span>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           {/* File/Folder Selection */}
           <div className="space-y-2">
-            <Label htmlFor="file-upload" className="flex items-center gap-2">
+            <Label htmlFor="file-upload" className="flex items-center gap-2 text-sm sm:text-base">
               <FileText className="h-4 w-4" />
-              Select File or Folder
+              <span className="hidden sm:inline">Select File or Folder</span>
+              <span className="sm:hidden">Select File/Folder</span>
             </Label>
             <div className="space-y-2">
               <Input
@@ -416,7 +421,7 @@ export default function Home() {
                 className="cursor-pointer file:cursor-pointer"
                 multiple
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-col sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
@@ -427,7 +432,7 @@ export default function Home() {
                       input.click();
                     }
                   }}
-                  className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded"
+                  className="text-xs px-3 py-2 bg-muted hover:bg-muted/80 rounded flex-1 sm:flex-none"
                   disabled={uploading}
                 >
                   Choose File
@@ -442,7 +447,7 @@ export default function Home() {
                       input.click();
                     }
                   }}
-                  className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded"
+                  className="text-xs px-3 py-2 bg-muted hover:bg-muted/80 rounded flex-1 sm:flex-none"
                   disabled={uploading}
                 >
                   Choose Folder
@@ -486,7 +491,7 @@ export default function Home() {
           {/* Share Mode Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Share Method</Label>
-            <div className="flex gap-4">
+            <div className="flex gap-2 sm:gap-4 flex-col sm:flex-row">
               <div className="flex items-center space-x-2">
                 <input
                   type="radio"
@@ -497,9 +502,10 @@ export default function Home() {
                   onChange={(e) => setShareMode(e.target.value as 'email' | 'link')}
                   disabled={uploading}
                 />
-                <Label htmlFor="email-mode" className="flex items-center gap-1 text-sm">
+                <Label htmlFor="email-mode" className="flex items-center gap-1 text-sm cursor-pointer">
                   <Mail className="h-3 w-3" />
-                  Send via Email
+                  <span className="hidden sm:inline">Send via Email</span>
+                  <span className="sm:hidden">Email</span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -512,9 +518,10 @@ export default function Home() {
                   onChange={(e) => setShareMode(e.target.value as 'email' | 'link')}
                   disabled={uploading}
                 />
-                <Label htmlFor="link-mode" className="flex items-center gap-1 text-sm">
+                <Label htmlFor="link-mode" className="flex items-center gap-1 text-sm cursor-pointer">
                   <Lock className="h-3 w-3" />
-                  Generate Link Only
+                  <span className="hidden sm:inline">Generate Link Only</span>
+                  <span className="sm:hidden">Link Only</span>
                 </Label>
               </div>
             </div>
@@ -522,9 +529,10 @@ export default function Home() {
 
           {/* Recipients Management */}
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+            <Label className="flex items-center gap-2 text-sm">
               <Mail className="h-4 w-4" />
-              {shareMode === 'email' ? `Recipients (max 3)` : user ? 'Confirmation Email' : 'Your Email Address'}
+              <span className="hidden sm:inline">{shareMode === 'email' ? `Recipients (max 3)` : user ? 'Confirmation Email' : 'Your Email Address'}</span>
+              <span className="sm:hidden">{shareMode === 'email' ? `Recipients` : 'Email'}</span>
             </Label>
             
             {shareMode === 'email' ? (
@@ -590,15 +598,16 @@ export default function Home() {
               variant="ghost"
               size="sm"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full justify-center sm:justify-start"
             >
               <Settings className="h-4 w-4" />
-              Advanced Settings
+              <span className="hidden sm:inline">Advanced Settings</span>
+              <span className="sm:hidden">Advanced</span>
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
 
             {showAdvanced && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 border rounded-lg bg-muted/30">
                 {/* Upload Method */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Upload Method</Label>
@@ -874,7 +883,8 @@ export default function Home() {
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    {uploadMethod === 'chunked' ? 'Chunked Upload' : (shareMode === 'email' ? 'Upload & Email' : 'Upload & Generate Link')}
+                    <span className="hidden sm:inline">{uploadMethod === 'chunked' ? 'Chunked Upload' : (shareMode === 'email' ? 'Upload & Email' : 'Upload & Generate Link')}</span>
+                    <span className="sm:hidden">{uploadMethod === 'chunked' ? 'Chunked' : (shareMode === 'email' ? 'Upload' : 'Generate')}</span>
                   </>
                 )}
               </Button>
@@ -910,10 +920,18 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigator.clipboard.writeText(shareUrl)}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 2000);
+                      } catch (err) {
+                        console.error('Failed to copy URL:', err);
+                      }
+                    }}
                     className="text-xs"
                   >
-                    Copy URL
+                    {urlCopied ? 'URL Copied!' : 'Copy URL'}
                   </Button>
                 </div>
               </div>
