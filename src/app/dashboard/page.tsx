@@ -114,6 +114,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
+          {/* Left side - Title and User */}
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Files className="h-5 w-5 text-primary" />
@@ -124,27 +125,35 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          {/* Right side - Navigation and Actions */}
+          <div className="flex items-center gap-2">
+            {/* Navigation */}
             <Link href="/info">
               <Button variant="ghost" size="sm">
                 <Info className="h-4 w-4 mr-2" />
                 Info
               </Button>
             </Link>
+            
+            {/* Primary Actions */}
             <Link href="/">
               <Button variant="outline" size="sm">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload New
               </Button>
             </Link>
+            
+            {/* Settings & User Actions */}
             <Link href="/account">
-              <Button variant="outline" size="sm">
+              <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4 mr-2" />
                 Account
               </Button>
             </Link>
+            
             <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
+            
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
@@ -241,7 +250,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Footer Links */}
-      <div className="absolute bottom-4 left-4 flex gap-3">
+      <div className="fixed bottom-4 right-4 flex gap-3 z-10">
         <a
           href="https://github.com/ArjandenHartog/openfiles"
           target="_blank"

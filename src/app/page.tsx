@@ -354,34 +354,41 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
       {/* Header Navigation */}
-      <div className="absolute top-4 right-4 flex items-center gap-3">
-        <Link href="/info">
-          <Button variant="ghost" size="sm">
-            <Info className="h-4 w-4 mr-2" />
-            Info
-          </Button>
-        </Link>
-        {user ? (
-          <>
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm">
-                <User className="h-4 w-4 mr-2" />
-                My Files
-              </Button>
-            </Link>
-            <span className="text-sm text-muted-foreground">
-              {getUserDisplayName()}
-            </span>
-          </>
-        ) : (
-          <Link href="/auth">
-            <Button variant="outline" size="sm">
-              <User className="h-4 w-4 mr-2" />
-              Sign In
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+        {/* Left side - Navigation */}
+        <div className="flex items-center gap-3">
+          <Link href="/info">
+            <Button variant="ghost" size="sm">
+              <Info className="h-4 w-4 mr-2" />
+              Info
             </Button>
           </Link>
-        )}
-        <ThemeToggle />
+        </div>
+        
+        {/* Right side - User & Theme */}
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {getUserDisplayName()}
+              </span>
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm">
+                  <User className="h-4 w-4 mr-2" />
+                  My Files
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href="/auth">
+              <Button variant="outline" size="sm">
+                <User className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            </Link>
+          )}
+          <ThemeToggle />
+        </div>
       </div>
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
@@ -916,29 +923,27 @@ export default function Home() {
       </Card>
       </div>
       
-      {/* Footer */}
-      <footer className="p-4 flex justify-center">
-        <div className="flex gap-3">
-          <a
-            href="https://github.com/ArjandenHartog/openfiles"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-            title="View on GitHub"
-          >
-            <Github className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-          </a>
-          <a
-            href="https://arjandenhartog.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-            title="Made with ❤️ by Arjan"
-          >
-            <Heart className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-          </a>
-        </div>
-      </footer>
+      {/* Footer Links */}
+      <div className="fixed bottom-4 left-4 flex gap-3 z-10">
+        <a
+          href="https://github.com/openfilesapp/openfiles"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
+          title="View on GitHub"
+        >
+          <Github className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+        </a>
+        <a
+          href="https://arjandenhartog.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
+          title="Made with ❤️ by Arjan"
+        >
+          <Heart className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+        </a>
+      </div>
     </div>
   );
 }
