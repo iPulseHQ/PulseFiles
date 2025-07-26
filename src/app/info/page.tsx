@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Shield, Server, Clock, Lock, Code, FileText, ArrowLeft, Github, Heart } from 'lucide-react';
+import { Shield, Server, Clock, Lock, Code, FileText, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function InfoPage() {
@@ -201,28 +201,6 @@ export default function InfoPage() {
             </Button>
           </Link>
         </div>
-      </div>
-
-      {/* Footer Links */}
-      <div className="fixed bottom-4 left-4 flex gap-3 z-10">
-        <a
-          href="https://github.com/ArjandenHartog/openfiles"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="View on GitHub"
-        >
-          <Github className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
-        <a
-          href="https://arjandenhartog.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="Made with ❤️ by Arjan"
-        >
-          <Heart className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
       </div>
     </div>
   );

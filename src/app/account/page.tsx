@@ -8,18 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@clerk/nextjs';
 import { Save, ArrowLeft, Settings, Info } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function AccountPage() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, isLoaded } = useUser();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -29,18 +23,22 @@ export default function AccountPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth');
+    if (!isLoaded) return; // Wait for Clerk to load
+    
+    if (!user) {
+      // Redirect to Clerk hosted login
+      const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
+      window.location.href = clerkSignInUrl;
       return;
     }
 
-    // Load current profile data
-    if (userProfile) {
-      setFirstName(userProfile.first_name || '');
-      setLastName(userProfile.last_name || '');
-      setDisplayName(userProfile.display_name || '');
+    // Load current profile data from Clerk
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setDisplayName(`${user.firstName || ''} ${user.lastName || ''}`.trim());
     }
-  }, [user, userProfile, loading, router]);
+  }, [user, isLoaded, router]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,33 +55,22 @@ export default function AccountPage() {
     setSuccess('');
 
     try {
-      const finalDisplayName = displayName.trim() || `${firstName.trim()} ${lastName.trim()}`;
-      
-      const { error } = await supabase
-        .from('user_profiles')
-        .upsert({
-          id: user.id,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          display_name: finalDisplayName,
-          updated_at: new Date().toISOString(),
-        });
+      // Update user profile via Clerk
+      await user.update({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess('Profile updated successfully!');
-        // Refresh the auth context
-        window.location.reload();
-      }
-    } catch {
+      setSuccess('Profile updated successfully!');
+    } catch (error) {
       setError('Failed to update profile');
+      console.error('Profile update error:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
@@ -146,7 +133,7 @@ export default function AccountPage() {
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">Email Address</Label>
               <Input
-                value={user?.email || ''}
+                value={user?.primaryEmailAddress?.emailAddress || ''}
                 disabled
                 className="bg-muted"
               />

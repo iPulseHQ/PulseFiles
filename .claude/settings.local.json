@@ -63,7 +63,8 @@
       "Bash(node:*)",
       "Bash(find:*)",
       "Bash(rg:*)",
-      "Bash(openssl rand:*)"
+      "Bash(openssl rand:*)",
+      "Bash(npx next lint:*)"
     ],
     "deny": []
   }

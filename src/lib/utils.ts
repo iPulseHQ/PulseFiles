@@ -40,17 +40,17 @@ export function isValidRedirectUrl(url: string, allowedDomains: string[] = []): 
 }
 
 // Generate Content Security Policy header (disabled - using next.config.js instead)
-export function generateCSPHeader(nonce?: string): string {
+export function generateCSPHeader(): string {
   // CSP is now configured in next.config.js to avoid conflicts
   return "";
 }
 
 // Security headers helper
-export function getSecurityHeaders(nonce?: string): Record<string, string> {
+export function getSecurityHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   
   if (process.env.ENABLE_CSP === 'true') {
-    headers['Content-Security-Policy'] = generateCSPHeader(nonce);
+    headers['Content-Security-Policy'] = generateCSPHeader();
   }
   
   if (process.env.ENABLE_HSTS === 'true') {

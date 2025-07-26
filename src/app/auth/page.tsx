@@ -2,7 +2,7 @@
 
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SignIn, SignUp } from '@clerk/nextjs';
-import { Github, ArrowLeft, Heart, Info } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import React from 'react';
@@ -72,28 +72,6 @@ export default function AuthPage() {
             signUpUrl="/auth"
           />
         )}
-      </div>
-
-      {/* Footer Links */}
-      <div className="absolute bottom-4 left-4 flex gap-3">
-        <a
-          href="https://github.com/pulsefilesapp/pulsefiles"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="View on GitHub"
-        >
-          <Github className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
-        <a
-          href="https://arjandenhartog.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="Made with ❤️ by Arjan"
-        >
-          <Heart className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
       </div>
     </div>
   );
