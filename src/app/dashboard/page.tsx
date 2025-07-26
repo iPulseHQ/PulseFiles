@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useUser, useAuth, SignOutButton } from '@clerk/nextjs';
-import { Files, Upload, LogOut, Clock, Download, Share, Copy, Settings, Key, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Files, Upload, LogOut, Clock, Download, Share, Copy, Settings, Key, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                   <div className="space-y-2">
                     <p className="font-medium">API Key Created Successfully!</p>
                     <p className="text-sm">
-                      Save this key securely - you won't be able to see it again.
+                      Save this key securely - you won&apos;t be able to see it again.
                     </p>
                     <div className="flex items-center gap-2 p-2 bg-muted rounded font-mono text-sm">
                       <code className="flex-1">{newlyCreatedKey.full_key}</code>
