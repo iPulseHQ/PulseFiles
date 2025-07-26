@@ -1,10 +1,10 @@
-# OpenFiles - Secure File Sharing
+# PulseFiles - Secure File Sharing
 
 A Next.js application for secure file sharing with end-to-end encryption, built with TypeScript and Supabase.
 
 # Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopenfilesapp%2Fopenfiles&project-name=openfiles&repository-name=openfiles)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpulsefilesapp%2Fpulsefiles&project-name=pulsefiles&repository-name=pulsefiles)
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ UPLOAD_RATE_LIMIT_MAX=100
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd openfiles
+cd pulsefiles
 ```
 
 2. Install dependencies:

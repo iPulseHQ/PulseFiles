@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Upload, FileText, Mail, Clock, Lock, X, Zap, ChevronDown, ChevronUp, Settings, Github, Heart, User, Info } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { EXPIRATION_OPTIONS, type ExpirationOption, type AccessControl, validateEmails, validateFolderUpload } from '@/lib/security';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 
 function formatFileSize(bytes: number): string {
@@ -34,7 +35,10 @@ function formatTime(seconds: number): string {
 }
 
 export default function Home() {
-  const { user, session, getUserDisplayName } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
+  
+  // All state hooks must be at the top level
   const [file, setFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isFolder, setIsFolder] = useState(false);
@@ -54,9 +58,11 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [maxDownloads, setMaxDownloads] = useState<number | ''>('');
   const [urlCopied, setUrlCopied] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
 
   const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
-    accessToken: session?.access_token,
+    accessToken: null, // Will be handled by getToken() when needed
     onError: (error) => {
       setMessage(`Error: ${error}`);
     },
@@ -72,15 +78,39 @@ export default function Home() {
     }
   });
 
+  // Redirect to Clerk hosted login if not logged in
+  useEffect(() => {
+    if (isLoaded && !user) {
+      const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.origin)}`;
+      window.location.href = clerkSignInUrl;
+    }
+  }, [isLoaded, user]);
+
   // Auto-fill email for logged in users ONLY in "Generate Link Only" mode
   useEffect(() => {
-    if (shareMode === 'link' && user?.email && (!recipients[0] || recipients[0].trim() === '')) {
-      setRecipients([user.email]);
+    if (shareMode === 'link' && user?.primaryEmailAddress?.emailAddress && (!recipients[0] || recipients[0].trim() === '')) {
+      setRecipients([user.primaryEmailAddress.emailAddress]);
     } else if (shareMode === 'email') {
       // Clear the first recipient when switching to email mode
       setRecipients(['']);
     }
-  }, [user?.email, shareMode]);
+  }, [user?.primaryEmailAddress?.emailAddress, shareMode]);
+
+  // Show loading or redirect to auth if not logged in
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Don't render anything while redirecting
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -112,9 +142,6 @@ export default function Home() {
       }
     }
   };
-
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState('');
 
   // Helper functions for recipients management
   const addRecipient = () => {
@@ -228,6 +255,9 @@ export default function Home() {
       setUploadStatus('Uploading file...');
       setUploadProgress(10);
 
+      // Get auth token first
+      const token = await getToken();
+
       const xhr = new XMLHttpRequest();
       
       // Track upload progress
@@ -254,8 +284,8 @@ export default function Home() {
       xhr.open('POST', '/api/upload');
       
       // Add authorization header if user is authenticated
-      if (session?.access_token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
       
       xhr.send(formData);
@@ -337,13 +367,15 @@ export default function Home() {
     setShareUrl('');
 
     try {
+      const token = await getToken();
       await uploadFile(file, emailsToSend[0], expirationOption, customSlug, shareMode, {
         recipients: emailsToSend,
         title: title.trim() || file.name,
         message: messageText.trim(),
         accessControl: accessControl,
         password: accessControl === 'password' ? password.trim() : undefined,
-        maxDownloads: typeof maxDownloads === 'number' ? maxDownloads : undefined
+        maxDownloads: typeof maxDownloads === 'number' ? maxDownloads : undefined,
+        accessToken: token
       });
     } catch {
       // Error is handled by the hook
@@ -373,7 +405,7 @@ export default function Home() {
           {user ? (
             <>
               <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
-                {getUserDisplayName()}
+                {user.firstName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
               </span>
               <Link href="/dashboard">
                 <Button variant="outline" size="sm" className="px-2 sm:px-3">
@@ -398,7 +430,7 @@ export default function Home() {
           <div className="mx-auto mb-4 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
             <Upload className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl sm:text-2xl">OpenFiles</CardTitle>
+          <CardTitle className="text-2xl sm:text-2xl">PulseFiles</CardTitle>
           <CardDescription className="text-sm sm:text-base">
             <span className="hidden sm:inline">Upload a file and get a secure sharing link</span>
             <span className="sm:hidden">Secure file sharing</span>
@@ -944,7 +976,7 @@ export default function Home() {
       {/* Footer Links */}
       <div className="fixed bottom-4 left-4 flex gap-3 z-10">
         <a
-          href="https://github.com/openfilesapp/openfiles"
+          href="https://github.com/pulsefilesapp/pulsefiles"
           target="_blank"
           rel="noopener noreferrer"
           className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"

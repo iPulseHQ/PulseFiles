@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // For static export (optional - uncomment if you want static hosting)
+  // output: 'export',
+  // trailingSlash: true,
+  // images: { unoptimized: true },
+  
   // Enable large file uploads
   experimental: {
     largePageDataBytes: 128 * 1000, // 128KB
@@ -62,11 +67,13 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev https://*.googleapis.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https:",
-              "connect-src 'self' https: wss: *.supabase.co https://o447951.ingest.sentry.io",
+              "connect-src 'self' https: wss: *.supabase.co https://o447951.ingest.sentry.io https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com wss://*.clerk.dev wss://*.clerk.accounts.dev",
+              "frame-src 'self' https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev",
+              "worker-src 'self' blob:",
               "frame-ancestors 'none'",
             ].join('; '),
           },

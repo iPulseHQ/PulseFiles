@@ -50,6 +50,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       accessControl?: string;
       password?: string;
       maxDownloads?: number;
+      accessToken?: string;
     }
   ) => {
     if (!file || !email) {
@@ -99,8 +100,9 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       }
 
       const initHeaders: Record<string, string> = {};
-      if (accessToken) {
-        initHeaders['Authorization'] = `Bearer ${accessToken}`;
+      const tokenToUse = additionalData?.accessToken || accessToken;
+      if (tokenToUse) {
+        initHeaders['Authorization'] = `Bearer ${tokenToUse}`;
       }
 
       const initResponse = await fetch('/api/upload-chunk', {
@@ -138,8 +140,8 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
             chunkFormData.append('chunk', chunk);
 
             const chunkHeaders: Record<string, string> = {};
-            if (accessToken) {
-              chunkHeaders['Authorization'] = `Bearer ${accessToken}`;
+            if (tokenToUse) {
+              chunkHeaders['Authorization'] = `Bearer ${tokenToUse}`;
             }
 
             const chunkResponse = await fetch('/api/upload-chunk', {
@@ -189,8 +191,8 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       completeFormData.append('sessionId', newSessionId);
 
       const completeHeaders: Record<string, string> = {};
-      if (accessToken) {
-        completeHeaders['Authorization'] = `Bearer ${accessToken}`;
+      if (tokenToUse) {
+        completeHeaders['Authorization'] = `Bearer ${tokenToUse}`;
       }
 
       const completeResponse = await fetch('/api/upload-chunk', {
@@ -216,8 +218,8 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
           abortFormData.append('action', 'abort');
           abortFormData.append('sessionId', sessionId);
           const abortHeaders: Record<string, string> = {};
-          if (accessToken) {
-            abortHeaders['Authorization'] = `Bearer ${accessToken}`;
+          if (tokenToUse) {
+            abortHeaders['Authorization'] = `Bearer ${tokenToUse}`;
           }
 
           await fetch('/api/upload-chunk', {
