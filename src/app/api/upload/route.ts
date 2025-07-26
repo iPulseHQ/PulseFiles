@@ -446,7 +446,7 @@ export async function POST(request: NextRequest) {
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                 <p style="color: #999; font-size: 12px; text-align: center;">
-                  Shared securely via OpenFiles
+                  Shared securely via PulseFiles
                 </p>
               </div>
             `,
@@ -513,7 +513,7 @@ export async function POST(request: NextRequest) {
               
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
               <p style="color: #999; font-size: 12px; text-align: center;">
-                Shared securely via OpenFiles
+                Shared securely via PulseFiles
               </p>
             </div>
           `,
