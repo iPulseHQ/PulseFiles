@@ -90,11 +90,11 @@ export default function Home() {
   useEffect(() => {
     if (shareMode === 'link' && user?.primaryEmailAddress?.emailAddress && (!recipients[0] || recipients[0].trim() === '')) {
       setRecipients([user.primaryEmailAddress.emailAddress]);
-    } else if (shareMode === 'email') {
+    } else if (shareMode === 'email' && recipients[0] !== '') {
       // Clear the first recipient when switching to email mode
       setRecipients(['']);
     }
-  }, [user?.primaryEmailAddress?.emailAddress, shareMode, recipients]);
+  }, [user?.primaryEmailAddress?.emailAddress, shareMode]);
 
   // Show loading or redirect to auth if not logged in
   if (!isLoaded) {
