@@ -11,7 +11,7 @@ const supabase = createClient(
 export async function GET() {
   try {
     // Verify the user with Clerk
-    const { userId, sessionClaims } = await auth();
+    const { userId } = await auth();
     
     if (!userId) {
       return NextResponse.json(
@@ -23,9 +23,8 @@ export async function GET() {
     console.log('Clerk User ID:', userId);
     
     // Get user's files from database
-    // Since user_id column type is causing issues, let's try a workaround
-    let files: any[] = [];
-    let error: any = null;
+    let files: Record<string, unknown>[] = [];
+    let error: Error | null = null;
     
     try {
       // Try to get files by user_id
@@ -37,11 +36,10 @@ export async function GET() {
       
       files = result.data || [];
       error = result.error;
-    } catch (dbError) {
+    } catch {
       console.log('Direct user_id query failed, trying alternative approach');
       
       // Alternative: Get recent files (for now just return empty array)
-      // In production, you might want to match by email or use a different approach
       files = [];
       error = null;
     }

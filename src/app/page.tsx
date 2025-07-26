@@ -94,6 +94,7 @@ export default function Home() {
       // Clear the first recipient when switching to email mode
       setRecipients(['']);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.primaryEmailAddress?.emailAddress, shareMode]);
 
   // Show loading or redirect to auth if not logged in
