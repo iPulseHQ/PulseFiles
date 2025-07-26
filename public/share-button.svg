@@ -1,0 +1,12 @@
+<svg width="140" height="28" viewBox="0 0 140 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="140" height="28" rx="6" fill="#3B82F6"/>
+  <g clip-path="url(#clip0)">
+    <path d="M12 6C8.69 6 6 8.69 6 12s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 9l-2-2 0.71-0.71L11 13.59l3.29-3.29L15 11l-4 4z" fill="white"/>
+  </g>
+  <text x="28" y="17" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="white">Share on PulseFiles</text>
+  <defs>
+    <clipPath id="clip0">
+      <rect width="12" height="12" fill="white" transform="translate(6 6)"/>
+    </clipPath>
+  </defs>
+</svg>

@@ -61,6 +61,9 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
     setIsUploading(true);
     const startTime = Date.now();
     let uploadedBytes = 0;
+    
+    // Define tokenToUse outside try block so it's available in catch block
+    const tokenToUse = additionalData?.accessToken || accessToken;
 
     try {
       // Initialize upload
@@ -100,7 +103,6 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       }
 
       const initHeaders: Record<string, string> = {};
-      const tokenToUse = additionalData?.accessToken || accessToken;
       if (tokenToUse) {
         initHeaders['Authorization'] = `Bearer ${tokenToUse}`;
       }

@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, FileText, Mail, Clock, Lock, X, Zap, ChevronDown, ChevronUp, Settings, Github, Heart, User, Info } from 'lucide-react';
-import { redirect } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Upload, FileText, Mail, Clock, Lock, X, Zap, ChevronDown, ChevronUp, Settings, User } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,7 @@ import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { EXPIRATION_OPTIONS, type ExpirationOption, type AccessControl, validateEmails, validateFolderUpload } from '@/lib/security';
 import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -62,7 +62,7 @@ export default function Home() {
   const [uploadStatus, setUploadStatus] = useState('');
 
   const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
-    accessToken: null, // Will be handled by getToken() when needed
+    accessToken: undefined, // Will be handled by getToken() when needed
     onError: (error) => {
       setMessage(`Error: ${error}`);
     },
@@ -94,7 +94,7 @@ export default function Home() {
       // Clear the first recipient when switching to email mode
       setRecipients(['']);
     }
-  }, [user?.primaryEmailAddress?.emailAddress, shareMode]);
+  }, [user?.primaryEmailAddress?.emailAddress, shareMode, recipients]);
 
   // Show loading or redirect to auth if not logged in
   if (!isLoaded) {
@@ -375,7 +375,7 @@ export default function Home() {
         accessControl: accessControl,
         password: accessControl === 'password' ? password.trim() : undefined,
         maxDownloads: typeof maxDownloads === 'number' ? maxDownloads : undefined,
-        accessToken: token
+        accessToken: token || undefined
       });
     } catch {
       // Error is handled by the hook
@@ -392,12 +392,9 @@ export default function Home() {
       <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between">
         {/* Left side - Navigation */}
         <div className="flex items-center gap-1 sm:gap-3">
-          <Link href="/info">
-            <Button variant="ghost" size="sm" className="px-2 sm:px-3">
-              <Info className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Info</span>
-            </Button>
-          </Link>
+          <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
+            <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+          </a>
         </div>
         
         {/* Right side - User & Theme */}
@@ -427,14 +424,10 @@ export default function Home() {
       </div>
       <Card className="w-full max-w-lg mx-auto">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Upload className="h-6 w-6 text-primary" />
-          </div>
+              <div className="mx-auto mb-4 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Image src="/android-chrome-512x512.png" alt="Pulsefile" width={48} height={48} className="h-12 w-auto" />
+              </div>
           <CardTitle className="text-2xl sm:text-2xl">PulseFiles</CardTitle>
-          <CardDescription className="text-sm sm:text-base">
-            <span className="hidden sm:inline">Upload a file and get a secure sharing link</span>
-            <span className="sm:hidden">Secure file sharing</span>
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           {/* File/Folder Selection */}
@@ -971,28 +964,6 @@ export default function Home() {
           )}
         </CardContent>
       </Card>
-      </div>
-      
-      {/* Footer Links */}
-      <div className="fixed bottom-4 left-4 flex gap-3 z-10">
-        <a
-          href="https://github.com/pulsefilesapp/pulsefiles"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="View on GitHub"
-        >
-          <Github className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
-        <a
-          href="https://arjandenhartog.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 transition-colors shadow-sm"
-          title="Made with ❤️ by Arjan"
-        >
-          <Heart className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-        </a>
       </div>
     </div>
   );
