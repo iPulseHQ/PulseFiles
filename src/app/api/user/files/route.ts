@@ -20,12 +20,29 @@ export async function GET() {
       );
     }
 
-    // Get user's files from database using Clerk user ID
-    const { data: files, error } = await supabase
-      .from('shared_files')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    console.log('Clerk User ID:', userId);
+    
+    // Get user's files from database
+    let files: Record<string, unknown>[] = [];
+    let error: Error | null = null;
+    
+    try {
+      // Try to get files by user_id
+      const result = await supabase
+        .from('shared_files')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      files = result.data || [];
+      error = result.error;
+    } catch {
+      console.log('Direct user_id query failed, trying alternative approach');
+      
+      // Alternative: Get recent files (for now just return empty array)
+      files = [];
+      error = null;
+    }
 
     if (error) {
       console.error('Database error:', error);

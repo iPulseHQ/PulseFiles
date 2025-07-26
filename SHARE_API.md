@@ -32,7 +32,7 @@ x-api-key: pf_your_api_key_here
 
 **Request:**
 ```bash
-curl -X POST https://pulsefiles.app/api/share \
+curl -X POST https://files.pulseguard.nl/api/share \
   -H "x-api-key: pf_your_api_key_here" \
   -F "file=@document.pdf" \
   -F "title=My Document" \
@@ -48,7 +48,7 @@ curl -X POST https://pulsefiles.app/api/share \
 ```json
 {
   "success": true,
-  "shareUrl": "https://pulsefiles.app/download/abc123",
+  "shareUrl": "https://files.pulseguard.nl/download/abc123",
   "fileId": "abc123",
   "title": "My Document",
   "expiresAt": "2024-01-01T00:00:00.000Z",
@@ -65,7 +65,7 @@ async function shareFile(file, apiKey) {
   formData.append('title', 'My Document');
   formData.append('expiration', '7days');
 
-  const response = await fetch('https://pulsefiles.app/api/share', {
+  const response = await fetch('https://files.pulseguard.nl/api/share', {
     method: 'POST',
     headers: {
       'x-api-key': apiKey
@@ -90,7 +90,7 @@ async function shareFile(file, apiKey) {
 import requests
 
 def share_file(file_path, api_key, title=None, expiration='7days'):
-    url = 'https://pulsefiles.app/api/share'
+    url = 'https://files.pulseguard.nl/api/share'
     
     headers = {
         'x-api-key': api_key
@@ -126,7 +126,7 @@ Add a "Share on PulseFiles" button to your website with our JavaScript widget.
 
 1. Include the widget script:
 ```html
-<script src="https://pulsefiles.app/share-widget.js"></script>
+<script src="https://files.pulseguard.nl/share-widget.js"></script>
 ```
 
 2. Add a share button with data attributes:
@@ -141,7 +141,7 @@ Add a "Share on PulseFiles" button to your website with our JavaScript widget.
 ### Advanced Usage
 
 ```html
-<script src="https://pulsefiles.app/share-widget.js"></script>
+<script src="https://files.pulseguard.nl/share-widget.js"></script>
 
 <input type="file" id="fileInput" />
 <div id="shareButton"></div>
@@ -171,7 +171,7 @@ You can also use our pre-made SVG badge:
 
 ```html
 <a href="#" onclick="shareWithPulseFiles()">
-  <img src="https://pulsefiles.app/share-button.svg" alt="Share on PulseFiles" />
+  <img src="https://files.pulseguard.nl/share-button.svg" alt="Share on PulseFiles" />
 </a>
 ```
 

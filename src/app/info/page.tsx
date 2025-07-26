@@ -29,7 +29,7 @@ export default function InfoPage() {
           <div className="mx-auto mb-6 h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
             <FileText className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold mb-4">OpenFiles</h1>
+          <h1 className="text-4xl font-bold mb-4">PulseFiles</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Veilige en tijdelijke bestandsdeling met end-to-end encryptie
           </p>

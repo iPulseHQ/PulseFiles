@@ -207,8 +207,47 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+      {/* Header Navigation */}
+      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between mb-4">
+        {/* Left side - Logo (hidden on mobile) */}
+        <div className="hidden sm:flex items-center gap-1 sm:gap-3">
+          <div className="flex flex-col items-center">
+            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
+              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+            </a>
+            <span className="text-xs text-muted-foreground mt-1">onderdeel van Pulseguard</span>
+          </div>
+        </div>
+        
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              <Upload className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Upload New</span>
+            </Button>
+          </Link>
+          
+          <Link href="/account">
+            <Button variant="ghost" size="sm">
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Account</span>
+            </Button>
+          </Link>
+          
+          <ThemeToggle />
+          
+          <SignOutButton redirectUrl="/">
+            <Button variant="ghost" size="sm">
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </SignOutButton>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto pt-16 sm:pt-20">
         <div className="flex justify-between items-center mb-8">
           {/* Left side - Title and User */}
           <div className="flex items-center gap-4">
@@ -219,39 +258,6 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold">Dashboard</h1>
               <p className="text-muted-foreground">{getUserDisplayName()}</p>
             </div>
-          </div>
-          
-          {/* Right side - Navigation and Actions */}
-          <div className="flex items-center gap-2">
-            {/* Navigation */}
-            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
-              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
-            </a>
-            
-            {/* Primary Actions */}
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload New
-              </Button>
-            </Link>
-            
-            {/* Settings & User Actions */}
-            <Link href="/account">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Account
-              </Button>
-            </Link>
-            
-            <ThemeToggle />
-            
-            <SignOutButton redirectUrl="/">
-              <Button variant="ghost" size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </SignOutButton>
           </div>
         </div>
 
