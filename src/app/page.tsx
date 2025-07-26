@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Upload, FileText, Mail, Clock, Lock, X, Zap, ChevronDown, ChevronUp, Settings, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -392,9 +392,12 @@ export default function Home() {
       <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between">
         {/* Left side - Navigation */}
         <div className="flex items-center gap-1 sm:gap-3">
-          <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
-            <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
-          </a>
+          <div className="flex flex-col items-center">
+            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
+              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+            </a>
+            <span className="text-xs text-muted-foreground mt-1">onderdeel van PulseGuard</span>
+          </div>
         </div>
         
         {/* Right side - User & Theme */}
@@ -428,6 +431,9 @@ export default function Home() {
                 <Image src="/android-chrome-512x512.png" alt="Pulsefile" width={48} height={48} className="h-12 w-auto" />
               </div>
           <CardTitle className="text-2xl sm:text-2xl">PulseFiles</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Onderdeel van PulseGuard
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           {/* File/Folder Selection */}

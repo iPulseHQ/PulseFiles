@@ -224,9 +224,12 @@ export default function DashboardPage() {
           {/* Right side - Navigation and Actions */}
           <div className="flex items-center gap-2">
             {/* Navigation */}
-            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
-              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
-            </a>
+            <div className="flex flex-col items-center">
+              <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
+                <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+              </a>
+              <span className="text-xs text-muted-foreground mt-1">onderdeel van Pulseguard</span>
+            </div>
             
             {/* Primary Actions */}
             <Link href="/">
