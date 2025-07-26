@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata: Metadata = {
-  title: "OpenFiles",
+  title: "PulseFiles",
   description: "Upload and share files securely",
 };
 
@@ -24,16 +24,16 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body className="font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
+        <ClerkProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
             {children}
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

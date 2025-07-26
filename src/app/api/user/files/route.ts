@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptFilename } from '@/lib/security';
+import { auth } from '@clerk/nextjs/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,31 +10,21 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'No authorization header' },
-        { status: 401 }
-      );
-    }
-
-    // Verify the user with Supabase
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Verify the user with Clerk
+    const { userId } = await auth();
     
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Get user's files from database
+    // Get user's files from database using Clerk user ID
     const { data: files, error } = await supabase
       .from('shared_files')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {

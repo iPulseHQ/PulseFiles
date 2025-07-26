@@ -1,6 +1,19 @@
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+const isProtectedRoute = createRouteMatcher([
+  '/',
+  '/dashboard(.*)',
+  '/admin(.*)',
+  '/account(.*)',
+  '/api/upload(.*)',
+  '/api/upload-chunk(.*)',
+  '/api/secure-download(.*)',
+])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) await auth.protect()
+
   const response = NextResponse.next();
 
   // Add security headers
@@ -9,19 +22,33 @@ export function middleware(request: NextRequest) {
   // Prevent MIME type sniffing
   response.headers.set('X-Content-Type-Options', 'nosniff');
   
+  // Content Security Policy with Clerk support
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev https://*.googleapis.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com wss://*.clerk.dev wss://*.clerk.accounts.dev",
+    "frame-src 'self' https://clerk.pulseguard.nl https://*.clerk.dev https://*.clerk.accounts.dev",
+    "worker-src 'self' blob:",
+  ].join('; ');
+  
+  response.headers.set('Content-Security-Policy', csp);
+  
   // Block access to sensitive files
-  if (request.nextUrl.pathname.includes('/.env') || 
-      request.nextUrl.pathname.includes('/.git') ||
-      request.nextUrl.pathname.includes('/node_modules')) {
+  if (req.nextUrl.pathname.includes('/.env') || 
+      req.nextUrl.pathname.includes('/.git') ||
+      req.nextUrl.pathname.includes('/node_modules')) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
   // Rate limiting for API routes (basic implementation)
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     
     // Add basic bot detection
-    const userAgent = request.headers.get('user-agent') || '';
+    const userAgent = req.headers.get('user-agent') || '';
     const suspiciousPatterns = [
       /bot/i,
       /crawler/i,
@@ -41,24 +68,20 @@ export function middleware(request: NextRequest) {
   }
 
   // Add CORS headers for API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  if (req.nextUrl.pathname.startsWith('/api/')) {
     response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || '*');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
 
   return response;
-}
+})
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
   ],
 };

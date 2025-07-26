@@ -1,16 +1,18 @@
 {
-  "name": "openfiles",
+  "name": "pulsefiles",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "export": "next build && next export",
     "start": "next start --port 3331",
     "lint": "next lint"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",
     "@aws-sdk/s3-request-presigner": "^3.850.0",
+    "@clerk/nextjs": "^6.27.1",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
     "@sentry/nextjs": "^9.40.0",

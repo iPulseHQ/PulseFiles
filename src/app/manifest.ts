@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'OpenFiles - Secure File Sharing',
-    short_name: 'OpenFiles',
+    name: 'PulseFiles - Secure File Sharing',
+    short_name: 'PulseFiles',
     description: 'Upload and share files securely with end-to-end encryption',
     start_url: '/',
     display: 'standalone',

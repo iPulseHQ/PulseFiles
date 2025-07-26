@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser, useAuth, SignOutButton } from '@clerk/nextjs';
 import { Files, Upload, LogOut, Clock, Download, Share, Copy, Settings, Github, Heart, Info } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,7 +24,8 @@ interface SharedFile {
 }
 
 export default function DashboardPage() {
-  const { user, session, loading, signOut, getUserDisplayName } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [files, setFiles] = useState<SharedFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [error, setError] = useState('');
@@ -32,9 +33,10 @@ export default function DashboardPage() {
 
   const fetchUserFiles = useCallback(async () => {
     try {
+      const token = await getToken();
       const response = await fetch('/api/user/files', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -49,24 +51,25 @@ export default function DashboardPage() {
     } finally {
       setLoadingFiles(false);
     }
-  }, [session?.access_token]);
+  }, [getToken]);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth');
+    if (!isLoaded) return; // Wait for Clerk to load
+    
+    if (!user) {
+      // Redirect to Clerk hosted login
+      const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
+      window.location.href = clerkSignInUrl;
       return;
     }
 
     if (user) {
       fetchUserFiles();
     }
-  }, [user, loading, router, fetchUserFiles]);
+  }, [user, isLoaded, router, fetchUserFiles]);
 
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (!error) {
-      router.push('/');
-    }
+  const getUserDisplayName = () => {
+    return user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -98,7 +101,7 @@ export default function DashboardPage() {
     return new Date() > new Date(expiresAt);
   };
 
-  if (loading || loadingFiles) {
+  if (!isLoaded || loadingFiles) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
@@ -153,10 +156,12 @@ export default function DashboardPage() {
             
             <ThemeToggle />
             
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <SignOutButton redirectUrl="/">
+              <Button variant="ghost" size="sm">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </SignOutButton>
           </div>
         </div>
 
