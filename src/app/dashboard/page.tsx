@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [newKeyName, setNewKeyName] = useState('');
   const [showNewKeyDialog, setShowNewKeyDialog] = useState(false);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState('');
   const router = useRouter();
 
   const fetchUserFiles = useCallback(async () => {
@@ -192,6 +193,18 @@ export default function DashboardPage() {
 
   const isExpired = (expiresAt: string) => {
     return new Date() > new Date(expiresAt);
+  };
+
+  const copyApiKey = async (apiKey: string) => {
+    try {
+      await navigator.clipboard.writeText(apiKey);
+      setCopyFeedback('API key copied to clipboard!');
+      setTimeout(() => setCopyFeedback(''), 3000);
+    } catch (err) {
+      console.error('Failed to copy API key:', err);
+      setCopyFeedback('Failed to copy API key');
+      setTimeout(() => setCopyFeedback(''), 3000);
+    }
   };
 
   if (!isLoaded || loadingFiles) {
@@ -446,17 +459,23 @@ export default function DashboardPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(newlyCreatedKey.full_key!);
-                        }}
+                        onClick={() => copyApiKey(newlyCreatedKey.full_key!)}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
+                    {copyFeedback && (
+                      <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                        {copyFeedback}
+                      </div>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setNewlyCreatedKey(null)}
+                      onClick={() => {
+                        setNewlyCreatedKey(null);
+                        setCopyFeedback('');
+                      }}
                     >
                       Got it
                     </Button>
