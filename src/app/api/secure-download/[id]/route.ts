@@ -283,6 +283,20 @@ async function handleDownloadRequest(
     const downloadIPHash = hashIP(clientIP);
     const userAgent = request.headers.get('user-agent') || 'unknown';
     
+    // Map access control values to valid method values for database constraint
+    const getAccessMethod = (accessControl: string) => {
+      switch (accessControl) {
+        case 'public':
+          return 'download';
+        case 'password':
+          return 'password';
+        case 'authenticated':
+          return 'authenticated';
+        default:
+          return 'download';
+      }
+    };
+
     const { error: logError } = await supabase
       .rpc('log_file_access', {
         file_id: id,
@@ -290,7 +304,7 @@ async function handleDownloadRequest(
         ip_hash_val: downloadIPHash,
         user_agent_val: userAgent,
         success: true,
-        method: fileRecord.access_control
+        method: getAccessMethod(fileRecord.access_control)
       });
     
     if (logError) {

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
-import { EXPIRATION_OPTIONS } from '@/lib/security';
+import { EXPIRATION_OPTIONS, generateObfuscatedKey, sanitizeFilename } from '@/lib/security';
+
+const s3 = new S3Client({
+  region: process.env.DO_REGION,
+  endpoint: `https://${process.env.DO_ENDPOINT}`,
+  credentials: {
+    accessKeyId: process.env.DO_ACCESS_TOKEN!,
+    secretAccessKey: process.env.DO_SECRET_KEY!,
+  },
+});
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,7 +55,6 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const title = formData.get('title') as string || file?.name || 'Shared File';
     const expiration = formData.get('expiration') as string || '7days';
     
     if (!file) {
@@ -64,26 +73,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique file ID
-    const fileId = nanoid(12);
+    const fileId = nanoid(64); // Use 64 chars like other endpoints
     
     // Calculate expiration date
     const expirationConfig = EXPIRATION_OPTIONS[expiration as keyof typeof EXPIRATION_OPTIONS];
     const expiresAt = new Date();
     expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
 
+    // Sanitize filename and generate obfuscated key
+    const sanitizedFilename = sanitizeFilename(file.name);
+    const obfuscatedKey = generateObfuscatedKey(sanitizedFilename, fileId);
+    
     // Convert file to buffer for storage
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Store in Supabase Storage
-    const fileName = `${fileId}_${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from('shared-files')
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: false
-      });
+    // Store in DigitalOcean Spaces
+    const uploadCommand = new PutObjectCommand({
+      Bucket: process.env.DO_BUCKET_NAME,
+      Key: obfuscatedKey,
+      Body: buffer,
+      ContentType: file.type,
+      Metadata: {
+        'original-filename': sanitizedFilename,
+        'upload-source': 'api',
+      },
+    });
 
-    if (uploadError) {
+    try {
+      await s3.send(uploadCommand);
+    } catch (uploadError) {
       console.error('Upload error:', uploadError);
       return NextResponse.json(
         { error: 'Failed to upload file' },
@@ -91,28 +109,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate file URL for DigitalOcean Spaces
+    const fileUrl = `https://${process.env.DO_ENDPOINT}/${process.env.DO_BUCKET_NAME}/${obfuscatedKey}`;
+
     // Save to database
     const { error: dbError } = await supabase
       .from('shared_files')
       .insert({
         id: fileId,
         user_id: keyData.user_id,
-        file_name: file.name,
+        file_name: sanitizedFilename,
         file_size: file.size,
         file_type: file.type,
-        title: title,
-        storage_path: fileName,
+        file_url: fileUrl,
+        obfuscated_key: obfuscatedKey,
+        email: '', // API uploads don't have email
         expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString(),
-        download_count: 0,
         access_control: 'public',
+        is_active: true,
+        download_count: 0,
+        is_folder: false,
         created_via: 'api'
       });
 
     if (dbError) {
       console.error('Database error:', dbError);
-      // Clean up uploaded file
-      await supabase.storage.from('shared-files').remove([fileName]);
+      // Clean up uploaded file - we don't need to remove from Supabase storage anymore
       return NextResponse.json(
         { error: 'Failed to save file metadata' },
         { status: 500 }
@@ -127,7 +149,8 @@ export async function POST(request: NextRequest) {
       success: true,
       shareUrl,
       fileId,
-      title,
+      fileName: sanitizedFilename,
+      fileSize: file.size,
       expiresAt: expiresAt.toISOString(),
       message: 'File shared successfully'
     });
