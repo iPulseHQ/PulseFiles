@@ -59,8 +59,25 @@ export default function DownloadSection({ shareId, accessControl, isFolder }: Do
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        setError(error.error || 'Download failed');
+        let errorMessage = 'Download failed';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status-based error messages
+          if (response.status === 405) {
+            errorMessage = 'Download service temporarily unavailable';
+          } else if (response.status === 404) {
+            errorMessage = 'File not found or expired';
+          } else if (response.status === 401) {
+            errorMessage = 'Authentication required';
+          } else if (response.status === 403) {
+            errorMessage = 'Access denied';
+          } else {
+            errorMessage = `Download failed (${response.status})`;
+          }
+        }
+        setError(errorMessage);
         return;
       }
 
