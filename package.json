@@ -15,7 +15,7 @@
     "@clerk/nextjs": "^6.27.1",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
-    "@sentry/nextjs": "^9.40.0",
+    "@sentry/nextjs": "^10.0.0",
     "@supabase/supabase-js": "^2.52.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jszip": "^3.4.0",
