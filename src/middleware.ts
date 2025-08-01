@@ -8,7 +8,6 @@ const isProtectedRoute = createRouteMatcher([
   '/account(.*)',
   '/api/upload(.*)',
   '/api/upload-chunk(.*)',
-  '/api/secure-download(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {
