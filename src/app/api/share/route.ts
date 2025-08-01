@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const title = formData.get('title') as string || file?.name || 'Shared File';
     const expiration = formData.get('expiration') as string || '7days';
     
     if (!file) {
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Sanitize filename and generate obfuscated key
     const sanitizedFilename = sanitizeFilename(file.name);
-    const obfuscatedKey = generateObfuscatedKey(sanitizedFilename);
+    const obfuscatedKey = generateObfuscatedKey(sanitizedFilename, fileId);
     
     // Convert file to buffer for storage
     const buffer = Buffer.from(await file.arrayBuffer());
