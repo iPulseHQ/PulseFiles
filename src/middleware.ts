@@ -24,12 +24,12 @@ export default clerkMiddleware(async (auth, req) => {
   // Content Security Policy with Clerk support
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.pulseguard.pro https://*.clerk.dev https://*.clerk.accounts.dev https://*.googleapis.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.pulseguard.pro https://clerk.ipulse.one https://*.clerk.dev https://*.clerk.accounts.dev https://*.googleapis.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' https: wss: *.supabase.co https://o447951.ingest.sentry.io https://clerk.pulseguard.pro https://*.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com wss://*.clerk.dev wss://*.clerk.accounts.dev",
-    "frame-src 'self' https://clerk.pulseguard.pro https://*.clerk.dev https://*.clerk.accounts.dev",
+    "connect-src 'self' https: wss: *.supabase.co https://o447951.ingest.sentry.io https://clerk.pulseguard.pro https://clerk.ipulse.one https://*.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com wss://*.clerk.dev wss://*.clerk.accounts.dev",
+    "frame-src 'self' https://clerk.pulseguard.pro https://clerk.ipulse.one https://*.clerk.dev https://*.clerk.accounts.dev",
     "worker-src 'self' blob:",
   ].join('; ');
   
