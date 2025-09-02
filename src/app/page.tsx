@@ -122,8 +122,8 @@ export default function Home() {
         setFile(selectedFiles[0]);
         setFiles([]);
         setIsFolder(false);
-        // Auto-select chunked upload for files > 100MB
-        setUploadMethod(selectedFiles[0].size > 100 * 1024 * 1024 ? 'chunked' : 'standard');
+        // Auto-select chunked upload for files > 50MB to prevent 413 errors
+        setUploadMethod(selectedFiles[0].size > 50 * 1024 * 1024 ? 'chunked' : 'standard');
       } else if (selectedFiles.length > 1) {
         // Multiple files (folder upload)
         setFiles(selectedFiles);
@@ -137,8 +137,8 @@ export default function Home() {
           return;
         }
         
-        // Auto-select chunked upload for folders or large total size
-        setUploadMethod(validation.totalSize > 100 * 1024 * 1024 ? 'chunked' : 'standard');
+        // Folders currently use standard upload (chunked not yet supported for folders)
+        setUploadMethod('standard');
         setMessage('');
       }
     }
@@ -307,7 +307,7 @@ export default function Home() {
         setMessage(result.message);
         setShareUrl(result.shareUrl);
         setUrlCopied(false);
-        
+
         // Clear form
         setFile(null);
         setFiles([]);
@@ -320,9 +320,47 @@ export default function Home() {
       } else {
         setMessage(`Error: ${result.error}`);
       }
-    } catch (error) {
-      setMessage('Upload failed. Please try again.');
+    } catch (error: any) {
       console.error('Upload error:', error);
+
+      // Check if it's a 413 error (Payload Too Large)
+      if (error.message && error.message.includes('413')) {
+        setMessage(`Bestand te groot voor standaard upload. Automatisch overschakelen naar chunked upload...`);
+        setUploadMethod('chunked');
+
+        // Automatically retry with chunked upload after a short delay
+        setTimeout(() => {
+          setMessage('');
+          setUploadProgress(0);
+          setUploadStatus('');
+          handleChunkedUpload();
+        }, 1500);
+        return;
+      }
+
+      // Check for other upload size related errors
+      if (error.message && (error.message.includes('too large') || error.message.includes('chunked upload') || error.message.includes('413'))) {
+        setMessage(`${error.message} Automatisch overschakelen naar chunked upload...`);
+        setUploadMethod('chunked');
+
+        // Automatically retry with chunked upload
+        setTimeout(() => {
+          setMessage('');
+          setUploadProgress(0);
+          setUploadStatus('');
+          handleChunkedUpload();
+        }, 1500);
+        return;
+      }
+
+      // Handle network errors that might indicate size issues
+      if (error.message && error.message.includes('Failed to load resource')) {
+        setMessage('Netwerkfout gedetecteerd. Probeer chunked upload voor grote bestanden.');
+        setUploadMethod('chunked');
+        return;
+      }
+
+      setMessage('Upload mislukt. Probeer het opnieuw of gebruik chunked upload voor grote bestanden.');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -331,8 +369,15 @@ export default function Home() {
   };
 
   const handleChunkedUpload = async () => {
-    if (!file) {
-      setMessage('Please select a file');
+    if (!file && !isFolder) {
+      setMessage('Please select a file or folder');
+      return;
+    }
+    
+    // Chunked upload currently only supports single files
+    if (isFolder) {
+      setMessage('Chunked upload is not yet supported for folders. Please use standard upload.');
+      setUploadMethod('standard');
       return;
     }
     
@@ -369,9 +414,9 @@ export default function Home() {
 
     try {
       const token = await getToken();
-      await uploadFile(file, emailsToSend[0], expirationOption, customSlug, shareMode, {
+      await uploadFile(file!, emailsToSend[0], expirationOption, customSlug, shareMode, {
         recipients: emailsToSend,
-        title: title.trim() || file.name,
+        title: title.trim() || file!.name,
         message: messageText.trim(),
         accessControl: accessControl,
         password: accessControl === 'password' ? password.trim() : undefined,
@@ -844,11 +889,11 @@ export default function Home() {
                   </p>
                 </div>
 
-                {((file && file.size > 100 * 1024 * 1024 && uploadMethod === 'standard') || (isFolder && files.reduce((sum, f) => sum + f.size, 0) > 100 * 1024 * 1024 && uploadMethod === 'standard')) && (
+                {((file && file.size > 50 * 1024 * 1024 && uploadMethod === 'standard') || (isFolder && files.reduce((sum, f) => sum + f.size, 0) > 50 * 1024 * 1024 && uploadMethod === 'standard')) && (
                   <Alert>
                     <Zap className="h-4 w-4" />
                     <AlertDescription className="text-sm">
-                      {isFolder ? 'Folder' : 'File'} is over 100MB. Consider using <strong>Chunked Upload</strong> for better reliability.
+                      {isFolder ? 'Map' : 'Bestand'} is groter dan 50MB. Gebruik <strong>Chunked Upload</strong> voor betere betrouwbaarheid en om 413 fouten te voorkomen.
                     </AlertDescription>
                   </Alert>
                 )}

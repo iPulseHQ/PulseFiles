@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       'DO_REGION', 'DO_ENDPOINT', 'DO_ACCESS_TOKEN', 'DO_SECRET_KEY', 'DO_BUCKET_NAME',
       'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SITE_URL', 'RESEND_API_KEY'
     ];
-    
+
     for (const envVar of requiredEnvVars) {
       if (!process.env[envVar]) {
         console.error(`Missing required environment variable: ${envVar}`);
@@ -77,6 +77,19 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+    }
+
+    // Early check for file size to prevent unnecessary processing
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 100 * 1024 * 1024) { // 100MB
+      return NextResponse.json(
+        {
+          error: 'File too large for standard upload. Please use chunked upload for files over 100MB.',
+          suggestion: 'Switch to chunked upload method',
+          maxStandardSize: '100MB'
+        },
+        { status: 413 }
+      );
     }
     
     // Rate limiting check
@@ -97,8 +110,18 @@ export async function POST(request: NextRequest) {
       currentUser = user;
     }
 
-    const formData = await request.formData();
-    
+    // Handle large file uploads with better error handling
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (error) {
+      console.error('Failed to parse form data:', error);
+      return NextResponse.json(
+        { error: 'Failed to process upload request. File may be too large.' },
+        { status: 400 }
+      );
+    }
+
     // File/folder handling
     const file = formData.get('file') as File;
     const files = formData.getAll('files') as File[];

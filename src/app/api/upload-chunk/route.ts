@@ -71,6 +71,7 @@ const uploadSessions = new Map<string, {
   parts: Array<{ ETag: string; PartNumber: number }>;
   shareId: string;
   fileSize: number;
+  chunkSize: number;
   email: string;
   recipients: string[];
   title: string;
@@ -96,23 +97,58 @@ export async function POST(request: NextRequest) {
       currentUser = user;
     }
     
-    // Rate limiting - configurable for uploads
-    const uploadRateLimit = parseInt(process.env.UPLOAD_RATE_LIMIT_MAX || '100');
-    if (!checkRateLimit(`chunk_${clientIP}`, uploadRateLimit, 60000)) {
+    const formData = await request.formData();
+    const action = formData.get('action') as string;
+    
+    if (!action) {
       return NextResponse.json(
-        { error: 'Too many upload requests. Please slow down.' },
+        { error: 'Missing action parameter' },
+        { status: 400 }
+      );
+    }
+    
+    // Rate limiting - different limits for different actions
+    let rateLimitKey = `upload_${clientIP}`;
+    let rateLimitMax = 10; // Default for unknown actions
+    let rateLimitWindow = 60000; // 1 minute
+
+    if (action === 'init') {
+      // More lenient for initialization
+      rateLimitMax = 20;
+      rateLimitKey = `upload_init_${clientIP}`;
+    } else if (action === 'chunk') {
+      // Very lenient for chunks - allow many chunks per minute
+      rateLimitMax = 200;
+      rateLimitKey = `upload_chunk_${clientIP}`;
+      rateLimitWindow = 300000; // 5 minutes for chunks
+    } else if (action === 'complete') {
+      // Lenient for completion
+      rateLimitMax = 20;
+      rateLimitKey = `upload_complete_${clientIP}`;
+    } else if (action === 'abort') {
+      // Most lenient for abort
+      rateLimitMax = 50;
+      rateLimitKey = `upload_abort_${clientIP}`;
+    }
+
+    if (!checkRateLimit(rateLimitKey, rateLimitMax, rateLimitWindow)) {
+      return NextResponse.json(
+        {
+          error: 'Too many upload requests. Please slow down.',
+          action: action,
+          limit: rateLimitMax,
+          window: rateLimitWindow
+        },
         { status: 429 }
       );
     }
-
-    const formData = await request.formData();
-    const action = formData.get('action') as string;
 
     if (action === 'init') {
       // Initialize multipart upload
       const fileName = formData.get('fileName') as string;
       const fileSize = parseInt(formData.get('fileSize') as string);
       const fileType = formData.get('fileType') as string;
+      const chunkSize = parseInt(formData.get('chunkSize') as string) || 5 * 1024 * 1024; // Default 5MB
       const email = formData.get('email') as string;
       const recipients = JSON.parse(formData.get('recipients') as string || '[]') as string[];
       const title = (formData.get('title') as string)?.trim() || '';
@@ -128,12 +164,15 @@ export async function POST(request: NextRequest) {
       const expirationOption = (formData.get('expirationOption') as ExpirationOption) || '7days';
       const customSlug = formData.get('customSlug') as string;
 
-      if (!fileName || !fileSize || !fileType) {
+      if (!fileName || !fileSize) {
         return NextResponse.json(
           { error: 'Missing required file parameters' },
           { status: 400 }
         );
       }
+      
+      // Set default file type if empty
+      const actualFileType = fileType || 'application/octet-stream';
 
       // Validate recipients
       const validEmails = recipients.length > 0 ? recipients : [email];
@@ -161,7 +200,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (!isAllowedFileType(fileType, fileName)) {
+      if (!isAllowedFileType(actualFileType, fileName)) {
         return NextResponse.json(
           { error: 'File type not allowed. Please upload a supported file format.' },
           { status: 400 }
@@ -215,7 +254,7 @@ export async function POST(request: NextRequest) {
       const createMultipartCommand = new CreateMultipartUploadCommand({
         Bucket: process.env.DO_BUCKET_NAME,
         Key: s3FileName,
-        ContentType: fileType,
+        ContentType: actualFileType,
         Metadata: {
           'original-name': sanitizedFileName,
           'upload-ip': clientIP,
@@ -239,6 +278,7 @@ export async function POST(request: NextRequest) {
         parts: [],
         shareId,
         fileSize,
+        chunkSize: chunkSize,
         email: validatedEmails[0], // Primary email for backward compatibility
         recipients: validatedEmails,
         title: sanitizedTitle || sanitizedFileName,
