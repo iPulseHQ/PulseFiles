@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 
 // Dynamische chunk size gebaseerd op bestandsgrootte
+// Kleinere chunks om 413 errors te voorkomen op Vercel/production servers
 function getOptimalChunkSize(fileSize: number): number {
-  if (fileSize <= 50 * 1024 * 1024) return 2 * 1024 * 1024; // 2MB voor kleine bestanden
-  if (fileSize <= 200 * 1024 * 1024) return 5 * 1024 * 1024; // 5MB voor medium bestanden
-  if (fileSize <= 1024 * 1024 * 1024) return 10 * 1024 * 1024; // 10MB voor grote bestanden
-  return 20 * 1024 * 1024; // 20MB voor zeer grote bestanden
+  if (fileSize <= 50 * 1024 * 1024) return 1 * 1024 * 1024; // 1MB voor kleine bestanden
+  if (fileSize <= 200 * 1024 * 1024) return 1 * 1024 * 1024; // 1MB voor medium bestanden
+  if (fileSize <= 1024 * 1024 * 1024) return 1 * 1024 * 1024; // 1MB voor grote bestanden
+  return 1 * 1024 * 1024; // 1MB voor zeer grote bestanden
 }
 
 interface UploadProgress {
