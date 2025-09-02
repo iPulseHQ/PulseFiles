@@ -178,50 +178,9 @@ export const ALLOWED_FILE_EXTENSIONS = [
 ];
 
 export function isAllowedFileType(mimeType: string, fileName?: string): boolean {
-  // Block dangerous MIME types
-  const dangerousMimeTypes = [
-    'application/x-executable',
-    'application/x-msdownload',
-    'application/x-msdos-program'
-  ];
-  
-  // Block dangerous extensions
-  const dangerousExtensions = ['.exe', '.scr', '.bat', '.cmd', '.com', '.pif', '.vbs', '.js'];
-  
-  if (fileName) {
-    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-    if (dangerousExtensions.includes(extension)) {
-      console.warn(`Blocked dangerous file extension: ${extension} for file: ${fileName}`);
-      return false;
-    }
-  }
-  
-  if (dangerousMimeTypes.includes(mimeType)) {
-    console.warn(`Blocked dangerous MIME type: ${mimeType}`);
-    return false;
-  }
-  
-  // First check MIME type
-  if (ALLOWED_FILE_TYPES.includes(mimeType)) {
-    return true;
-  }
-  
-  // If MIME type check fails, check file extension as fallback
-  if (fileName) {
-    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-    if (ALLOWED_FILE_EXTENSIONS.includes(extension)) {
-      return true;
-    }
-  }
-  
-  // Special case for application/octet-stream (generic binary)
-  // Allow if it has a recognized extension
-  if (mimeType === 'application/octet-stream' && fileName) {
-    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-    return ALLOWED_FILE_EXTENSIONS.includes(extension);
-  }
-  
-  return false;
+  // Allow all file types - just return true
+  // Note: This removes all file type restrictions for uploads
+  return true;
 }
 
 // Validate file size (configurable, default 10GB)

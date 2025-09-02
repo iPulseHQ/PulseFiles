@@ -5,10 +5,12 @@ const nextConfig = {
   // trailingSlash: true,
   // images: { unoptimized: true },
   
-  // Enable large file uploads
+  // Enable large file uploads and server packages
   experimental: {
     largePageDataBytes: 128 * 1000, // 128KB
     clientTraceMetadata: false, // Disable to reduce warnings
+    serverComponentsExternalPackages: ['bcrypt'],
+    // Note: API payload limits are handled per route in Next.js 15+
   },
   // Webpack optimization to reduce bundle size warnings
   webpack: (config, { isServer }) => {

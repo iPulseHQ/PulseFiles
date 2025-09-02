@@ -1,5 +1,13 @@
 import { useState, useCallback } from 'react';
 
+// Dynamische chunk size gebaseerd op bestandsgrootte
+function getOptimalChunkSize(fileSize: number): number {
+  if (fileSize <= 50 * 1024 * 1024) return 2 * 1024 * 1024; // 2MB voor kleine bestanden
+  if (fileSize <= 200 * 1024 * 1024) return 5 * 1024 * 1024; // 5MB voor medium bestanden
+  if (fileSize <= 1024 * 1024 * 1024) return 10 * 1024 * 1024; // 10MB voor grote bestanden
+  return 20 * 1024 * 1024; // 20MB voor zeer grote bestanden
+}
+
 interface UploadProgress {
   loaded: number;
   total: number;
@@ -9,7 +17,7 @@ interface UploadProgress {
 }
 
 interface ChunkedUploadOptions {
-  chunkSize?: number;
+  chunkSize?: number; // Optioneel - wordt automatisch berekend als niet opgegeven
   maxRetries?: number;
   accessToken?: string;
   onProgress?: (progress: UploadProgress) => void;
@@ -19,7 +27,7 @@ interface ChunkedUploadOptions {
 
 export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
   const {
-    chunkSize = 5 * 1024 * 1024, // 5MB chunks
+    chunkSize: defaultChunkSize,
     maxRetries = 3,
     accessToken,
     onProgress,
@@ -61,7 +69,10 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
     setIsUploading(true);
     const startTime = Date.now();
     let uploadedBytes = 0;
-    
+
+    // Bepaal optimale chunk size gebaseerd op bestandsgrootte
+    const chunkSize = defaultChunkSize || getOptimalChunkSize(file.size);
+
     // Define tokenToUse outside try block so it's available in catch block
     const tokenToUse = additionalData?.accessToken || accessToken;
 
@@ -72,6 +83,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       initFormData.append('fileName', file.name);
       initFormData.append('fileSize', file.size.toString());
       initFormData.append('fileType', file.type);
+      initFormData.append('chunkSize', chunkSize.toString());
       initFormData.append('shareMode', shareMode);
       initFormData.append('email', email);
       
@@ -176,13 +188,19 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
             setProgress(newProgress);
             onProgress?.(newProgress);
 
-          } catch {
+          } catch (error) {
             retries++;
             if (retries >= maxRetries) {
               throw new Error(`Failed to upload chunk ${chunkIndex + 1} after ${maxRetries} retries`);
             }
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+
+            // Exponential backoff with jitter
+            const baseDelay = Math.min(1000 * Math.pow(2, retries - 1), 30000); // Max 30 seconds
+            const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
+            const delay = baseDelay + jitter;
+
+            console.log(`Retry ${retries}/${maxRetries} for chunk ${chunkIndex + 1}, waiting ${Math.round(delay)}ms`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
@@ -241,7 +259,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
       setIsUploading(false);
       setSessionId(null);
     }
-  }, [chunkSize, maxRetries, accessToken, onProgress, onError, onSuccess, sessionId]);
+  }, [defaultChunkSize, maxRetries, accessToken, onProgress, onError, onSuccess, sessionId]);
 
   const abortUpload = useCallback(async () => {
     if (sessionId) {
