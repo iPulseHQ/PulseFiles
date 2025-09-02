@@ -320,11 +320,12 @@ export default function Home() {
       } else {
         setMessage(`Error: ${result.error}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       // Check if it's a 413 error (Payload Too Large)
-      if (error.message && error.message.includes('413')) {
+      if (errorMessage.includes('413')) {
         setMessage(`Bestand te groot voor standaard upload. Automatisch overschakelen naar chunked upload...`);
         setUploadMethod('chunked');
 
@@ -339,8 +340,8 @@ export default function Home() {
       }
 
       // Check for other upload size related errors
-      if (error.message && (error.message.includes('too large') || error.message.includes('chunked upload') || error.message.includes('413'))) {
-        setMessage(`${error.message} Automatisch overschakelen naar chunked upload...`);
+      if (errorMessage.includes('too large') || errorMessage.includes('chunked upload') || errorMessage.includes('413')) {
+        setMessage(`${errorMessage} Automatisch overschakelen naar chunked upload...`);
         setUploadMethod('chunked');
 
         // Automatically retry with chunked upload
@@ -354,7 +355,7 @@ export default function Home() {
       }
 
       // Handle network errors that might indicate size issues
-      if (error.message && error.message.includes('Failed to load resource')) {
+      if (errorMessage.includes('Failed to load resource')) {
         setMessage('Netwerkfout gedetecteerd. Probeer chunked upload voor grote bestanden.');
         setUploadMethod('chunked');
         return;

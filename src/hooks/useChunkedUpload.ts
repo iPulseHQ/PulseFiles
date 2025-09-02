@@ -188,7 +188,7 @@ export function useChunkedUpload(options: ChunkedUploadOptions = {}) {
             setProgress(newProgress);
             onProgress?.(newProgress);
 
-          } catch (error) {
+          } catch {
             retries++;
             if (retries >= maxRetries) {
               throw new Error(`Failed to upload chunk ${chunkIndex + 1} after ${maxRetries} retries`);

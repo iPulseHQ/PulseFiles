@@ -177,7 +177,7 @@ export const ALLOWED_FILE_EXTENSIONS = [
   '.iso', '.img', '.vdi', '.vmdk', '.log', '.db', '.sqlite', '.sqlite3'
 ];
 
-export function isAllowedFileType(mimeType: string, fileName?: string): boolean {
+export function isAllowedFileType(_mimeType: string, _fileName?: string): boolean {
   // Allow all file types - just return true
   // Note: This removes all file type restrictions for uploads
   return true;

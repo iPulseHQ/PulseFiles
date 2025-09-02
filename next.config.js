@@ -9,7 +9,6 @@ const nextConfig = {
   experimental: {
     largePageDataBytes: 128 * 1000, // 128KB
     clientTraceMetadata: false, // Disable to reduce warnings
-    serverComponentsExternalPackages: ['bcrypt'],
     // Note: API payload limits are handled per route in Next.js 15+
   },
   // Webpack optimization to reduce bundle size warnings
