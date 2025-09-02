@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       const fileName = formData.get('fileName') as string;
       const fileSize = parseInt(formData.get('fileSize') as string);
       const fileType = formData.get('fileType') as string;
-      const chunkSize = parseInt(formData.get('chunkSize') as string) || 5 * 1024 * 1024; // Default 5MB
+      const chunkSize = parseInt(formData.get('chunkSize') as string) || 1 * 1024 * 1024; // Default 1MB
       const email = formData.get('email') as string;
       const recipients = JSON.parse(formData.get('recipients') as string || '[]') as string[];
       const title = (formData.get('title') as string)?.trim() || '';
