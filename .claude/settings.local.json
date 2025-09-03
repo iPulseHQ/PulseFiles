@@ -66,6 +66,9 @@
       "Bash(openssl rand:*)",
       "Bash(npx next lint:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\Users\\Arjan\\Documents\\1. Projecten\\pulsecrm"
+    ]
   }
 }

@@ -24,6 +24,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -44,7 +45,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -60,6 +61,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -94,6 +96,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -118,5 +121,54 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Clerk widget mobile improvements */
+@media (max-width: 768px) {
+  /* Center Clerk widgets better on mobile */
+  .cl-rootBox {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  /* Improve Clerk card layout on mobile */
+  .cl-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+  }
+
+  /* Center Clerk form elements */
+  .cl-form {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Improve button centering on mobile */
+  .cl-button {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Better spacing for mobile */
+  .cl-formField {
+    margin-bottom: 1rem !important;
+  }
+
+  /* Center social buttons on mobile */
+  .cl-socialButtons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .cl-socialButtons .cl-button {
+    width: 100% !important;
   }
 }
