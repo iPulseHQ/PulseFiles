@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Databuddy } from '@databuddy/sdk';
 
 export const metadata: Metadata = {
   title: "PulseFiles",
@@ -34,6 +35,20 @@ export default function RootLayout({
               disableTransitionOnChange
             >
               {children}
+              <Databuddy
+                clientId="kPYGRD-TUMGUcNMsZ1RHY"
+                trackHashChanges={true}
+                trackAttributes={true}
+                trackOutgoingLinks={true}
+                trackInteractions={true}
+                trackEngagement={true}
+                trackScrollDepth={true}
+                trackExitIntent={true}
+                trackBounceRate={true}
+                trackWebVitals={true}
+                trackErrors={true}
+                enableBatching={true}
+              />
             </ThemeProvider>
           </AuthProvider>
         </ClerkProvider>
