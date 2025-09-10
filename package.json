@@ -13,6 +13,7 @@
     "@aws-sdk/client-s3": "^3.850.0",
     "@aws-sdk/s3-request-presigner": "^3.850.0",
     "@clerk/nextjs": "^6.27.1",
+    "@databuddy/sdk": "^2.0.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
     "@sentry/nextjs": "^10.0.0",

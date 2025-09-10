@@ -100,7 +100,7 @@ export default function Home() {
   // Show loading or redirect to auth if not logged in
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -433,104 +433,90 @@ export default function Home() {
   const isCurrentlyUploading = uploading || isUploading;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
       {/* Header Navigation */}
-      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between">
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
         {/* Left side - Navigation */}
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center">
           <div className="flex flex-col items-center">
-            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
-              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+            <a href="https://ipulse.one" target="_blank" rel="noopener noreferrer">
+              <Image 
+                src="/logopulsefileswithtekstdark.png" 
+                alt="IPulse" 
+                width={120} 
+                height={32} 
+                className="h-8 w-auto dark:hidden" 
+              />
+              <Image 
+                src="/logopulsefileswithtekstlight.png" 
+                alt="IPulse" 
+                width={120} 
+                height={32} 
+                className="h-8 w-auto hidden dark:block" 
+              />
             </a>
-            <span className="text-xs text-muted-foreground mt-1">onderdeel van PulseGuard</span>
+            <span className="text-xs text-muted-foreground mt-1">by IPulse</span>
           </div>
         </div>
         
         {/* Right side - User & Theme */}
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center gap-3">
           {user ? (
             <>
-              <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
+              <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.firstName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
               </span>
               <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="px-2 sm:px-3">
-                  <User className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">My Files</span>
+                <Button variant="ghost" size="sm">
+                  <User className="h-4 w-4 mr-2" />
+                  My Files
                 </Button>
               </Link>
             </>
           ) : (
             <Link href="/auth">
-              <Button variant="outline" size="sm" className="px-2 sm:px-3">
-                <User className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sign In</span>
+              <Button variant="ghost" size="sm">
+                <User className="h-4 w-4 mr-2" />
+                Sign In
               </Button>
             </Link>
           )}
           <ThemeToggle />
         </div>
       </div>
-      <Card className="w-full max-w-lg mx-auto">
-        <CardHeader className="text-center">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Image src="/android-chrome-512x512.png" alt="Pulsefile" width={48} height={48} className="h-12 w-auto" />
-              </div>
-          <CardTitle className="text-2xl sm:text-2xl">PulseFiles</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Onderdeel van PulseGuard
+      <Card className="w-full max-w-2xl mx-auto border-0 shadow-none bg-card/50">
+        <CardHeader className="text-center pb-8">
+          <div className="mx-auto mb-6 h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Image src="/android-chrome-512x512.png" alt="Pulsefile" width={64} height={64} className="h-16 w-auto" />
+          </div>
+          <CardTitle className="text-3xl font-light">PulseFiles</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Veilig bestanden delen - by IPulse
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <CardContent className="space-y-6 p-8">
           {/* File/Folder Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="file-upload" className="flex items-center gap-2 text-sm sm:text-base">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Select File or Folder</span>
-              <span className="sm:hidden">Select File/Folder</span>
-            </Label>
-            <div className="space-y-2">
-              <Input
-                id="file-upload"
-                type="file"
-                onChange={handleFileChange}
-                disabled={uploading}
-                className="cursor-pointer file:cursor-pointer"
-                multiple
-              />
-              <div className="flex gap-2 flex-col sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const input = document.getElementById('file-upload') as HTMLInputElement;
-                    if (input) {
-                      input.removeAttribute('webkitdirectory');
-                      input.multiple = false;
-                      input.click();
-                    }
-                  }}
-                  className="text-xs px-3 py-2 bg-muted hover:bg-muted/80 rounded flex-1 sm:flex-none"
+          <div className="space-y-3">
+            <div className="text-center">
+              <Label htmlFor="file-upload" className="text-base font-medium">
+                Selecteer bestanden
+              </Label>
+            </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <Input
+                  id="file-upload"
+                  type="file"
+                  onChange={handleFileChange}
                   disabled={uploading}
-                >
-                  Choose File
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const input = document.getElementById('file-upload') as HTMLInputElement;
-                    if (input) {
-                      (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
-                      input.multiple = true;
-                      input.click();
-                    }
-                  }}
-                  className="text-xs px-3 py-2 bg-muted hover:bg-muted/80 rounded flex-1 sm:flex-none"
-                  disabled={uploading}
-                >
-                  Choose Folder
-                </button>
+                  className="cursor-pointer file:cursor-pointer h-12 text-center file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  multiple
+                />
               </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Kies bestanden of sleep ze hiernaartoe
+              </p>
             </div>
             
             {/* Display selected files */}
@@ -567,10 +553,16 @@ export default function Home() {
           </div>
 
           {/* Share Mode Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Share Method</Label>
-            <div className="flex gap-2 sm:gap-4 flex-col sm:flex-row">
-              <div className="flex items-center space-x-2">
+          <div className="space-y-4">
+            <div className="text-center">
+              <Label className="text-base font-medium">Deel methode</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                shareMode === 'email' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border bg-card hover:bg-muted/50'
+              }`} onClick={() => setShareMode('email')}>
                 <input
                   type="radio"
                   id="email-mode"
@@ -579,14 +571,19 @@ export default function Home() {
                   checked={shareMode === 'email'}
                   onChange={(e) => setShareMode(e.target.value as 'email' | 'link')}
                   disabled={uploading}
+                  className="sr-only"
                 />
-                <Label htmlFor="email-mode" className="flex items-center gap-1 text-sm cursor-pointer">
-                  <Mail className="h-3 w-3" />
-                  <span className="hidden sm:inline">Send via Email</span>
-                  <span className="sm:hidden">Email</span>
-                </Label>
+                <div className="text-center">
+                  <Mail className="h-6 w-6 mx-auto mb-2" />
+                  <div className="font-medium">Via Email</div>
+                  <div className="text-sm text-muted-foreground">Direct versturen</div>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                shareMode === 'link' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border bg-card hover:bg-muted/50'
+              }`} onClick={() => setShareMode('link')}>
                 <input
                   type="radio"
                   id="link-mode"
@@ -595,22 +592,21 @@ export default function Home() {
                   checked={shareMode === 'link'}
                   onChange={(e) => setShareMode(e.target.value as 'email' | 'link')}
                   disabled={uploading}
+                  className="sr-only"
                 />
-                <Label htmlFor="link-mode" className="flex items-center gap-1 text-sm cursor-pointer">
-                  <Lock className="h-3 w-3" />
-                  <span className="hidden sm:inline">Generate Link Only</span>
-                  <span className="sm:hidden">Link Only</span>
-                </Label>
+                <div className="text-center">
+                  <Lock className="h-6 w-6 mx-auto mb-2" />
+                  <div className="font-medium">Link Alleen</div>
+                  <div className="text-sm text-muted-foreground">Link genereren</div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Recipients Management */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4" />
-              <span className="hidden sm:inline">{shareMode === 'email' ? `Recipients (max 3)` : user ? 'Confirmation Email' : 'Your Email Address'}</span>
-              <span className="sm:hidden">{shareMode === 'email' ? `Recipients` : 'Email'}</span>
+          <div className="space-y-3">
+            <Label className="text-base font-medium">
+              {shareMode === 'email' ? 'Ontvangers (max 3)' : 'Je email adres'}
             </Label>
             
             {shareMode === 'email' ? (
@@ -669,6 +665,61 @@ export default function Home() {
           </div>
 
 
+          {/* Quick Settings */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label htmlFor="expiration" className="flex items-center gap-2 text-sm font-medium">
+                <Clock className="h-4 w-4" />
+                Verloopt na
+              </Label>
+              <select
+                id="expiration"
+                value={expirationOption}
+                onChange={(e) => setExpirationOption(e.target.value as ExpirationOption)}
+                disabled={isCurrentlyUploading}
+                className="w-full p-3 border rounded-lg bg-background"
+              >
+                {Object.entries(EXPIRATION_OPTIONS).map(([key, option]) => (
+                  <option key={key} value={key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Beveiliging</Label>
+              <select
+                value={accessControl}
+                onChange={(e) => setAccessControl(e.target.value as AccessControl)}
+                disabled={isCurrentlyUploading}
+                className="w-full p-3 border rounded-lg bg-background"
+              >
+                <option value="public">Openbare link</option>
+                <option value="password">Wachtwoord beveiligd</option>
+                <option value="authenticated">Inlog vereist</option>
+              </select>
+            </div>
+          </div>
+
+          {accessControl === 'password' && (
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-sm font-medium">
+                Wachtwoord
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Voer wachtwoord in"
+                disabled={isCurrentlyUploading}
+                maxLength={50}
+                className="h-12"
+              />
+            </div>
+          )}
+
           {/* Advanced Settings (Collapsible) */}
           <div className="space-y-2">
             <Button
@@ -679,75 +730,15 @@ export default function Home() {
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full justify-center sm:justify-start"
             >
               <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Advanced Settings</span>
-              <span className="sm:hidden">Advanced</span>
+              <span>More Options</span>
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
 
             {showAdvanced && (
               <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 border rounded-lg bg-muted/30">
-                {/* Upload Method */}
+                {/* Custom Link */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Upload Method</Label>
-                  <div className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="standard"
-                        name="uploadMethod"
-                        value="standard"
-                        checked={uploadMethod === 'standard'}
-                        onChange={(e) => setUploadMethod(e.target.value as 'standard' | 'chunked')}
-                        disabled={isCurrentlyUploading}
-                      />
-                      <Label htmlFor="standard" className="flex items-center gap-1 text-sm">
-                        <Upload className="h-3 w-3" />
-                        Standard
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="chunked"
-                        name="uploadMethod"
-                        value="chunked"
-                        checked={uploadMethod === 'chunked'}
-                        onChange={(e) => setUploadMethod(e.target.value as 'standard' | 'chunked')}
-                        disabled={isCurrentlyUploading}
-                      />
-                      <Label htmlFor="chunked" className="flex items-center gap-1 text-sm">
-                        <Zap className="h-3 w-3" />
-                        Chunked
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expiration Time */}
-                <div className="space-y-2">
-                  <Label htmlFor="expiration" className="flex items-center gap-2 text-sm font-medium">
-                    <Clock className="h-4 w-4" />
-                    Link Expires In
-                  </Label>
-                  <select
-                    id="expiration"
-                    value={expirationOption}
-                    onChange={(e) => setExpirationOption(e.target.value as ExpirationOption)}
-                    disabled={isCurrentlyUploading}
-                    className="w-full p-2 border rounded-md bg-background text-sm"
-                  >
-                    {Object.entries(EXPIRATION_OPTIONS).map(([key, option]) => (
-                      <option key={key} value={key}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Custom Slug */}
-                <div className="space-y-2">
-                  <Label htmlFor="customSlug" className="flex items-center gap-2 text-sm font-medium">
-                    <Lock className="h-4 w-4" />
+                  <Label htmlFor="customSlug" className="text-sm font-medium">
                     Custom Link (Optional)
                   </Label>
                   <Input
@@ -761,77 +752,8 @@ export default function Home() {
                     maxLength={50}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Leave empty for auto-generated secure link. Only letters, numbers, _ and - allowed.
+                    Leave empty for auto-generated secure link
                   </p>
-                </div>
-
-                {/* Access Control */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Access Control</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="access-public"
-                        name="accessControl"
-                        value="public"
-                        checked={accessControl === 'public'}
-                        onChange={(e) => setAccessControl(e.target.value as AccessControl)}
-                        disabled={isCurrentlyUploading}
-                      />
-                      <Label htmlFor="access-public" className="text-sm">
-                        Public - Anyone with the link can access
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="access-password"
-                        name="accessControl"
-                        value="password"
-                        checked={accessControl === 'password'}
-                        onChange={(e) => setAccessControl(e.target.value as AccessControl)}
-                        disabled={isCurrentlyUploading}
-                      />
-                      <Label htmlFor="access-password" className="text-sm">
-                        Password Protected - Requires password to access
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="access-authenticated"
-                        name="accessControl"
-                        value="authenticated"
-                        checked={accessControl === 'authenticated'}
-                        onChange={(e) => setAccessControl(e.target.value as AccessControl)}
-                        disabled={isCurrentlyUploading}
-                      />
-                      <Label htmlFor="access-authenticated" className="text-sm">
-                        Authenticated Users Only - Requires account to access
-                      </Label>
-                    </div>
-                  </div>
-
-                  {accessControl === 'password' && (
-                    <div className="space-y-2 ml-6">
-                      <Label htmlFor="password" className="text-sm">
-                        Password
-                      </Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password for protection"
-                        disabled={isCurrentlyUploading}
-                        maxLength={50}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Users will need this password to download the file
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Download Limits */}
@@ -849,9 +771,6 @@ export default function Home() {
                     min="1"
                     max="1000"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Maximum number of times this file can be downloaded (leave empty for unlimited)
-                  </p>
                 </div>
 
                 {/* Title */}
@@ -889,15 +808,6 @@ export default function Home() {
                     {messageText.length}/500 characters
                   </p>
                 </div>
-
-                {((file && file.size > 50 * 1024 * 1024 && uploadMethod === 'standard') || (isFolder && files.reduce((sum, f) => sum + f.size, 0) > 50 * 1024 * 1024 && uploadMethod === 'standard')) && (
-                  <Alert>
-                    <Zap className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      {isFolder ? 'Map' : 'Bestand'} is groter dan 50MB. Gebruik <strong>Chunked Upload</strong> voor betere betrouwbaarheid en om 413 fouten te voorkomen.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </div>
             )}
           </div>
@@ -942,31 +852,24 @@ export default function Home() {
 
           {/* Upload Button */}
           {!isUploading && (
-            <div className="flex gap-2">
+            <div className="pt-4">
               <Button
                 onClick={handleUpload}
                 disabled={(!file && !isFolder) || recipients.filter(r => r.trim()).length === 0 || isCurrentlyUploading}
-                className="flex-1"
-                size="lg"
+                className="w-full h-14 text-lg font-medium"
               >
                 {isCurrentlyUploading ? (
                   <>
-                    <Upload className="mr-2 h-4 w-4 animate-spin" />
-                    {uploadMethod === 'chunked' ? 'Processing...' : 'Uploading...'}
+                    <Upload className="mr-3 h-5 w-5 animate-spin" />
+                    {shareMode === 'email' ? 'Uploaden en versturen...' : 'Uploaden...'}
                   </>
                 ) : (
                   <>
-                    {uploadMethod === 'chunked' ? (
-                      <Zap className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Upload className="mr-2 h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">{uploadMethod === 'chunked' ? 'Chunked Upload' : (shareMode === 'email' ? 'Upload & Email' : 'Upload & Generate Link')}</span>
-                    <span className="sm:hidden">{uploadMethod === 'chunked' ? 'Chunked' : (shareMode === 'email' ? 'Upload' : 'Generate')}</span>
+                    <Upload className="mr-3 h-5 w-5" />
+                    {shareMode === 'email' ? 'Upload en Verstuur' : 'Upload en Genereer Link'}
                   </>
                 )}
               </Button>
-              
             </div>
           )}
 

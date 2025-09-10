@@ -209,7 +209,7 @@ export default function DashboardPage() {
 
   if (!isLoaded || loadingFiles) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -219,32 +219,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+    <div className="min-h-screen bg-background p-4">
       {/* Header Navigation */}
-      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between mb-4">
-        {/* Left side - Logo (hidden on mobile) */}
-        <div className="hidden sm:flex items-center gap-1 sm:gap-3">
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between mb-4">
+        {/* Left side - Logo */}
+        <div className="flex items-center">
           <div className="flex flex-col items-center">
-            <a href="https://pulseguard.nl" target="_blank" rel="noopener noreferrer">
-              <Image src="/logolight.png" alt="PulseGuard" width={120} height={32} className="h-8 w-auto" />
+            <a href="https://ipulse.one" target="_blank" rel="noopener noreferrer">
+              <Image 
+                src="/logopulsefileswithtekstdark.png" 
+                alt="IPulse" 
+                width={120} 
+                height={32} 
+                className="h-8 w-auto dark:hidden" 
+              />
+              <Image 
+                src="/logopulsefileswithtekstlight.png" 
+                alt="IPulse" 
+                width={120} 
+                height={32} 
+                className="h-8 w-auto hidden dark:block" 
+              />
             </a>
-            <span className="text-xs text-muted-foreground mt-1">onderdeel van Pulseguard</span>
+            <span className="text-xs text-muted-foreground mt-1">by IPulse</span>
           </div>
         </div>
         
         {/* Right side - Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
           <Link href="/">
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Upload New</span>
+            <Button variant="ghost" size="sm">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload New
             </Button>
           </Link>
           
           <Link href="/account">
             <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Account</span>
+              <Settings className="h-4 w-4 mr-2" />
+              Account
             </Button>
           </Link>
           
@@ -252,26 +265,21 @@ export default function DashboardPage() {
           
           <SignOutButton redirectUrl="/">
             <Button variant="ghost" size="sm">
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </SignOutButton>
         </div>
       </div>
 
       {/* Header */}
-      <div className="max-w-6xl mx-auto pt-16 sm:pt-20">
-        <div className="flex justify-between items-center mb-8">
-          {/* Left side - Title and User */}
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Files className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground">{getUserDisplayName()}</p>
-            </div>
+      <div className="max-w-6xl mx-auto pt-20">
+        <div className="text-center mb-12">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Files className="h-8 w-8 text-primary" />
           </div>
+          <h1 className="text-3xl font-light mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">Welkom, {getUserDisplayName()}</p>
         </div>
 
         {error && (
@@ -281,21 +289,21 @@ export default function DashboardPage() {
         )}
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-6 bg-muted p-1 rounded-lg w-fit">
+        <div className="flex gap-1 mb-8 bg-muted p-1 rounded-lg w-fit mx-auto">
           <Button
             variant={activeTab === 'files' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('files')}
-            className="gap-2"
+            className="gap-2 px-6"
           >
             <Files className="h-4 w-4" />
-            My Files
+            Mijn Bestanden
           </Button>
           <Button
             variant={activeTab === 'api' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('api')}
-            className="gap-2"
+            className="gap-2 px-6"
           >
             <Key className="h-4 w-4" />
             API Keys
@@ -307,17 +315,17 @@ export default function DashboardPage() {
           <>
             {/* Files Grid */}
         {files.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className="text-center py-16 border-0 shadow-none bg-card/50">
             <CardContent>
-              <Files className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <CardTitle className="text-xl mb-2">No files yet</CardTitle>
-              <CardDescription className="mb-6">
-                Upload your first file to get started
+              <Files className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+              <CardTitle className="text-2xl font-light mb-3">Geen bestanden</CardTitle>
+              <CardDescription className="mb-8 text-base">
+                Upload je eerste bestand om te beginnen
               </CardDescription>
               <Link href="/">
-                <Button>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
+                <Button size="lg" className="px-8">
+                  <Upload className="h-5 w-5 mr-2" />
+                  Bestand Uploaden
                 </Button>
               </Link>
             </CardContent>
