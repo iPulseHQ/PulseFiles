@@ -81,7 +81,7 @@ export default function Home() {
     } else if (shareMode === 'email' && recipients[0] !== '') {
       setRecipients(['']);
     }
-  }, [user?.primaryEmailAddress?.emailAddress, shareMode]);
+  }, [user?.primaryEmailAddress?.emailAddress, shareMode, recipients]);
 
   if (!isLoaded) {
     return (
@@ -578,7 +578,7 @@ export default function Home() {
                             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                               <Video className="h-6 w-6" />
                             </div>
-                            <span className="text-xs font-medium">Video's</span>
+                            <span className="text-xs font-medium">Video&apos;s</span>
                           </div>
                           <div className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all duration-200 group">
                             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">

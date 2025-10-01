@@ -177,7 +177,7 @@ export const ALLOWED_FILE_EXTENSIONS = [
   '.iso', '.img', '.vdi', '.vmdk', '.log', '.db', '.sqlite', '.sqlite3'
 ];
 
-export function isAllowedFileType(_mimeType: string, _fileName?: string): boolean {
+export function isAllowedFileType(): boolean {
   // Allow all file types - just return true
   // Note: This removes all file type restrictions for uploads
   return true;
@@ -518,7 +518,7 @@ export function validateFolderUpload(files: File[]): {
       errors.push(`File "${file.name}" is too large (max ${formatFileSize(FOLDER_LIMITS.MAX_INDIVIDUAL_FILE_SIZE)})`);
     }
     
-    if (!isAllowedFileType(file.type, file.name)) {
+    if (!isAllowedFileType()) {
       errors.push(`File "${file.name}" has unsupported type`);
     }
   });
