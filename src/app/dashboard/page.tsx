@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useUser, useAuth, SignOutButton } from '@clerk/nextjs';
-import { Files, Upload, LogOut, Clock, Download, Share, Copy, Settings, Key, Plus, Trash2 } from 'lucide-react';
+import { Files, Upload, LogOut, Clock, Download, Share2, Copy, Settings, Key, Plus, Trash2, FileText, Check, ExternalLink, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -33,7 +32,7 @@ interface ApiKey {
   created_at: string;
   last_used?: string;
   is_active: boolean;
-  full_key?: string; // Only present when newly created
+  full_key?: string;
 }
 
 export default function DashboardPage() {
@@ -48,7 +47,7 @@ export default function DashboardPage() {
   const [newKeyName, setNewKeyName] = useState('');
   const [showNewKeyDialog, setShowNewKeyDialog] = useState(false);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
-  const [copyFeedback, setCopyFeedback] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchUserFiles = useCallback(async () => {
@@ -125,6 +124,8 @@ export default function DashboardPage() {
   };
 
   const deleteApiKey = async (keyId: string) => {
+    if (!confirm('Weet je zeker dat je deze API key wilt verwijderen?')) return;
+    
     try {
       const token = await getToken();
       const response = await fetch(`/api/api-keys?id=${keyId}`, {
@@ -145,10 +146,9 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (!isLoaded) return; // Wait for Clerk to load
+    if (!isLoaded) return;
     
     if (!user) {
-      // Redirect to Clerk hosted login
       const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
       window.location.href = clerkSignInUrl;
       return;
@@ -162,10 +162,6 @@ export default function DashboardPage() {
     }
   }, [user, isLoaded, router, fetchUserFiles, activeTab, fetchApiKeys]);
 
-  const getUserDisplayName = () => {
-    return user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
-  };
-
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -175,19 +171,32 @@ export default function DashboardPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('nl-NL', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   const copyShareUrl = async (fileId: string) => {
-    // Use environment variable for production URL, fallback to current origin for development
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const shareUrl = `${baseUrl}/download/${fileId}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      // You could add a toast notification here
-      console.log('Share URL copied to clipboard');
+      setCopiedId(fileId);
+      setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Failed to copy URL:', err);
+    }
+  };
+
+  const copyApiKey = async (apiKey: string, keyId: string) => {
+    try {
+      await navigator.clipboard.writeText(apiKey);
+      setCopiedId(keyId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -195,19 +204,7 @@ export default function DashboardPage() {
     return new Date() > new Date(expiresAt);
   };
 
-  const copyApiKey = async (apiKey: string) => {
-    try {
-      await navigator.clipboard.writeText(apiKey);
-      setCopyFeedback('API key copied to clipboard!');
-      setTimeout(() => setCopyFeedback(''), 3000);
-    } catch (err) {
-      console.error('Failed to copy API key:', err);
-      setCopyFeedback('Failed to copy API key');
-      setTimeout(() => setCopyFeedback(''), 3000);
-    }
-  };
-
-  if (!isLoaded || loadingFiles) {
+  if (!isLoaded || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -219,193 +216,199 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      {/* Header Navigation */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between mb-4">
-        {/* Left side - Logo */}
-        <div className="flex items-center">
-          <div className="flex flex-col items-center">
-            <a href="https://ipulse.one" target="_blank" rel="noopener noreferrer">
-              <Image 
-                src="/logopulsefileswithtekstdark.png" 
-                alt="IPulse" 
-                width={120} 
-                height={32} 
-                className="h-8 w-auto dark:hidden" 
-              />
-              <Image 
-                src="/logopulsefileswithtekstlight.png" 
-                alt="IPulse" 
-                width={120} 
-                height={32} 
-                className="h-8 w-auto hidden dark:block" 
-              />
-            </a>
-            <span className="text-xs text-muted-foreground mt-1">by IPulse</span>
-          </div>
-        </div>
-        
-        {/* Right side - Actions */}
-        <div className="flex items-center gap-2 ml-auto">
-          <Link href="/">
-            <Button variant="ghost" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload New
-            </Button>
-          </Link>
-          
-          <Link href="/account">
-            <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Account
-            </Button>
-          </Link>
-          
-          <ThemeToggle />
-          
-          <SignOutButton redirectUrl="/">
-            <Button variant="ghost" size="sm">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </SignOutButton>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="max-w-6xl mx-auto pt-20">
-        <div className="text-center mb-12">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Files className="h-8 w-8 text-primary" />
+      <header className="bg-background border-b border-border sticky top-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
+                <Upload className="h-5 w-5" />
+              </div>
+              <span className="text-xl font-semibold hidden sm:inline">
+                PulseFiles
+              </span>
+            </Link>
+
+            {/* Right side */}
+            <div className="flex items-center gap-3">
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline">Nieuw Upload</span>
+                </Button>
+              </Link>
+              <SignOutButton>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Uitloggen</span>
+                </Button>
+              </SignOutButton>
+              <ThemeToggle />
+            </div>
           </div>
-          <h1 className="text-3xl font-light mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Welkom, {getUserDisplayName()}</p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">
+            Hallo, {user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'daar'}! 👋
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Beheer je gedeelde bestanden en API keys
+          </p>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Tab Navigation */}
-        <div className="flex gap-1 mb-8 bg-muted p-1 rounded-lg w-fit mx-auto">
-          <Button
-            variant={activeTab === 'files' ? 'default' : 'ghost'}
-            size="sm"
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
+          <button
             onClick={() => setActiveTab('files')}
-            className="gap-2 px-6"
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'files'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
           >
-            <Files className="h-4 w-4" />
+            <Files className="inline-block h-4 w-4 mr-2" />
             Mijn Bestanden
-          </Button>
-          <Button
-            variant={activeTab === 'api' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('api')}
-            className="gap-2 px-6"
+            {activeTab === 'files' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('api');
+              if (apiKeys.length === 0) fetchApiKeys();
+            }}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'api'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
           >
-            <Key className="h-4 w-4" />
+            <Key className="inline-block h-4 w-4 mr-2" />
             API Keys
-          </Button>
+            {activeTab === 'api' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+            {error}
+          </div>
+        )}
 
         {/* Files Tab */}
         {activeTab === 'files' && (
-          <>
-            {/* Files Grid */}
-        {files.length === 0 ? (
-          <Card className="text-center py-16 border-0 shadow-none bg-card/50">
-            <CardContent>
-              <Files className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-              <CardTitle className="text-2xl font-light mb-3">Geen bestanden</CardTitle>
-              <CardDescription className="mb-8 text-base">
-                Upload je eerste bestand om te beginnen
-              </CardDescription>
-              <Link href="/">
-                <Button size="lg" className="px-8">
-                  <Upload className="h-5 w-5 mr-2" />
-                  Bestand Uploaden
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {files.map((file) => (
-              <Card key={file.id} className={`${isExpired(file.expires_at) ? 'opacity-60' : ''}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base truncate">
-                      {file.file_name}
-                    </CardTitle>
-                    {isExpired(file.expires_at) && (
-                      <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">
-                        Expired
-                      </span>
-                    )}
-                  </div>
-                  <CardDescription>
-                    {formatFileSize(file.file_size)} • {file.file_type}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      Uploaded {formatDate(file.created_at)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Download className="h-3 w-3" />
-                      {file.download_count} downloads
-                    </div>
-                    <div className="text-muted-foreground">
-                      Expires {formatDate(file.expires_at)}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {!isExpired(file.expires_at) && (
-                      <>
-                        <Link href={`/download/${file.id}`} className="flex-1">
-                          <Button variant="outline" size="sm" className="w-full">
-                            <Share className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyShareUrl(file.id)}
-                          className="flex-1"
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy Link
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
+          <div>
+            {loadingFiles ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Bestanden laden...</p>
+              </div>
+            ) : files.length === 0 ? (
+              <Card className="p-12 text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full mb-6">
+                  <Files className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Nog geen bestanden</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Je hebt nog geen bestanden gedeeld
+                </p>
+                <Link href="/">
+                  <Button className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Upload je eerste bestand
+                  </Button>
+                </Link>
               </Card>
-            ))}
+            ) : (
+              <div className="grid gap-4">
+                {files.map((file) => {
+                  const expired = isExpired(file.expires_at);
+                  return (
+                    <Card key={file.id} className={`p-6 ${expired ? 'opacity-60' : ''}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center shrink-0">
+                              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg truncate">{file.file_name}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {formatFileSize(file.file_size)} • {file.file_type}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>Geüpload: {formatDate(file.created_at)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              <span>
+                                {expired ? 'Verlopen' : `Verloopt: ${formatDate(file.expires_at)}`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Download className="h-4 w-4" />
+                              <span>{file.download_count}x gedownload</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyShareUrl(file.id)}
+                            className="gap-2"
+                          >
+                            {copiedId === file.id ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                Gekopieerd!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4" />
+                                Kopieer Link
+                              </>
+                            )}
+                          </Button>
+                          <Link href={`/download/${file.id}`} target="_blank">
+                            <Button variant="outline" size="sm" className="gap-2">
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-          </>
         )}
 
         {/* API Keys Tab */}
         {activeTab === 'api' && (
-          <div className="space-y-6">
-            {/* API Keys Header */}
-            <div className="flex justify-between items-center">
+          <div>
+            <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-xl font-semibold">API Keys</h2>
-                <p className="text-muted-foreground text-sm">
-                  Create API keys to programmatically share files
+                <h2 className="text-2xl font-bold mb-1">API Keys</h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Gebruik API keys om programmatisch bestanden te delen
                 </p>
               </div>
               <Button
@@ -413,174 +416,151 @@ export default function DashboardPage() {
                 className="gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Create API Key
+                Nieuwe Key
               </Button>
             </div>
 
-            {/* New API Key Dialog */}
+            {/* New Key Dialog */}
             {showNewKeyDialog && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create New API Key</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="keyName">API Key Name</Label>
+              <Card className="p-6 mb-6 border-blue-200 dark:border-blue-800">
+                <h3 className="font-semibold text-lg mb-4">Nieuwe API Key aanmaken</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="keyName" className="mb-2 block">
+                      Key Naam
+                    </Label>
                     <Input
                       id="keyName"
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
-                      placeholder="My App API Key"
-                      maxLength={50}
+                      placeholder="Bijv. Production App"
+                      className="max-w-md"
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={createApiKey} disabled={!newKeyName.trim()}>
-                      Create Key
+                      Aanmaken
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowNewKeyDialog(false);
-                        setNewKeyName('');
-                      }}
-                    >
-                      Cancel
+                    <Button variant="outline" onClick={() => {
+                      setShowNewKeyDialog(false);
+                      setNewKeyName('');
+                    }}>
+                      Annuleren
                     </Button>
                   </div>
-                </CardContent>
+                </div>
               </Card>
             )}
 
-            {/* Newly Created Key Display */}
+            {/* Newly Created Key */}
             {newlyCreatedKey && (
-              <Alert>
-                <Key className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="space-y-2">
-                    <p className="font-medium">API Key Created Successfully!</p>
-                    <p className="text-sm">
-                      Save this key securely - you won&apos;t be able to see it again.
-                    </p>
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded font-mono text-sm">
-                      <code className="flex-1">{newlyCreatedKey.full_key}</code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyApiKey(newlyCreatedKey.full_key!)}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    {copyFeedback && (
-                      <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                        {copyFeedback}
-                      </div>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setNewlyCreatedKey(null);
-                        setCopyFeedback('');
-                      }}
-                    >
-                      Got it
-                    </Button>
+              <Card className="p-6 mb-6 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center shrink-0">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
-                </AlertDescription>
-              </Alert>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-green-900 dark:text-green-100 mb-1">
+                      API Key Aangemaakt!
+                    </h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Kopieer deze key nu - je kunt hem later niet meer zien
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 font-mono text-sm break-all">
+                  {newlyCreatedKey.full_key}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    onClick={() => copyApiKey(newlyCreatedKey.full_key!, newlyCreatedKey.id)}
+                    className="gap-2"
+                  >
+                    {copiedId === newlyCreatedKey.id ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Gekopieerd!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Kopieer Key
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setNewlyCreatedKey(null)}
+                  >
+                    Sluiten
+                  </Button>
+                </div>
+              </Card>
             )}
 
             {/* API Keys List */}
             {loadingApiKeys ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading API keys...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">API Keys laden...</p>
               </div>
             ) : apiKeys.length === 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <CardTitle className="text-xl mb-2">No API Keys</CardTitle>
-                  <CardDescription className="mb-6">
-                    Create your first API key to start sharing files programmatically
-                  </CardDescription>
-                  <Button onClick={() => setShowNewKeyDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create API Key
-                  </Button>
-                </CardContent>
+              <Card className="p-12 text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full mb-6">
+                  <Key className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Nog geen API Keys</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Maak je eerste API key aan om te beginnen
+                </p>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {apiKeys.map((apiKey) => (
-                  <Card key={apiKey.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-medium">{apiKey.name}</h3>
-                          <p className="text-sm text-muted-foreground font-mono">
-                            {apiKey.key_preview}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>Created {formatDate(apiKey.created_at)}</span>
-                            {apiKey.last_used && (
-                              <span>Last used {formatDate(apiKey.last_used)}</span>
-                            )}
+              <div className="grid gap-4">
+                {apiKeys.map((key) => (
+                  <Card key={key.id} className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg">{key.name}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                              {key.key_preview}
+                            </p>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteApiKey(apiKey.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>Aangemaakt: {formatDate(key.created_at)}</span>
+                          </div>
+                          {key.last_used && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              <span>Laatst gebruikt: {formatDate(key.last_used)}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </CardContent>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteApiKey(key.id)}
+                        className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Verwijderen
+                      </Button>
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
-
-            {/* API Documentation */}
-            <Card>
-              <CardHeader>
-                <CardTitle>API Documentation</CardTitle>
-                <CardDescription>
-                  Use the PulseFiles API to share files programmatically
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Share a File</h4>
-                  <div className="bg-muted p-3 rounded text-sm font-mono overflow-x-auto">
-                    <code>{`curl -X POST ${process.env.NEXT_PUBLIC_SITE_URL || 'https://pulsefiles.app'}/api/share \\
-  -H "x-api-key: pf_your_api_key_here" \\
-  -F "file=@document.pdf" \\
-  -F "title=My Document" \\
-  -F "expiration=7days"`}</code>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Response</h4>
-                  <div className="bg-muted p-3 rounded text-sm font-mono">
-                    <code>{`{
-  "success": true,
-  "shareUrl": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://pulsefiles.app'}/download/abc123",
-  "fileId": "abc123",
-  "title": "My Document",
-  "expiresAt": "2024-01-01T00:00:00.000Z"
-}`}</code>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
