@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (!isAllowedFileType(actualFileType, fileName)) {
+      if (!isAllowedFileType()) {
         return NextResponse.json(
           { error: 'File type not allowed. Please upload a supported file format.' },
           { status: 400 }

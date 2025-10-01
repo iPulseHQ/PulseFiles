@@ -6,35 +6,11 @@ const nextConfig = {
   // images: { unoptimized: true },
   
   // Enable large file uploads and server packages
-  experimental: {
-    largePageDataBytes: 128 * 1000, // 128KB
-    clientTraceMetadata: false, // Disable to reduce warnings
-    // Note: API payload limits are handled per route in Next.js 15+
-  },
-  // Webpack optimization to reduce bundle size warnings
-  webpack: (config, { isServer }) => {
-    // Optimize bundle splitting
-    if (!isServer) {
-      config.optimization.splitChunks = {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...config.optimization.splitChunks.cacheGroups,
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-            maxSize: 200000, // 200KB chunks
-          },
-        },
-      };
-    }
-    
-    // Reduce string serialization warnings
-    config.optimization.usedExports = true;
-    config.optimization.sideEffects = false;
-    
-    return config;
-  },
+  // experimental: {
+  //   largePageDataBytes: 128 * 1000, // 128KB
+  //   // clientTraceMetadata: false, // Disable to reduce warnings
+  //   // Note: API payload limits are handled per route in Next.js 15+
+  // },
   async headers() {
     return [
       {
@@ -86,8 +62,8 @@ const nextConfig = {
   compress: true,
   // Remove powered by header
   poweredByHeader: false,
-  // Enable external packages for server components
-  serverExternalPackages: ['bcrypt'],
+  // Disable minification to avoid unicode issues
+  swcMinify: false,
 };
 
 // Sentry configuration

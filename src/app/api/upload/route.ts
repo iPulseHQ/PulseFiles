@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       // Folder validation already done above
     } else if (file) {
       // Single file validation
-      if (!isAllowedFileType(file.type, file.name)) {
+      if (!isAllowedFileType()) {
         return NextResponse.json(
           { error: 'File type not allowed. Please upload a supported file format.' },
           { status: 400 }
