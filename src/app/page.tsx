@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Mail, Clock, Lock, X, ChevronDown, ChevronUp, Settings, User, Send, Link as LinkIcon, Check, Shield, FileText, Copy, HardDrive, Zap, Image as ImageIcon, Music, Video, Archive } from 'lucide-react';
+import { Upload, Mail, Clock, Lock, X, ChevronDown, ChevronUp, Settings, User, Send, Link as LinkIcon, Check, Shield, FileText, Copy, HardDrive, Zap, ImageIcon, Video, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,6 @@ import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { EXPIRATION_OPTIONS, type ExpirationOption, type AccessControl, validateEmails, validateFolderUpload } from '@/lib/security';
 import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
-import Image from 'next/image';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -25,13 +24,6 @@ function formatFileSize(bytes: number): string {
 
 function formatSpeed(bytesPerSecond: number): string {
   return formatFileSize(bytesPerSecond) + '/s';
-}
-
-function formatTime(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.round(seconds % 60);
-  return `${minutes}m ${remainingSeconds}s`;
 }
 
 export default function Home() {
@@ -61,7 +53,7 @@ export default function Home() {
   const [uploadStatus, setUploadStatus] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
-  const { uploadFile, abortUpload, isUploading, progress } = useChunkedUpload({
+  const { uploadFile, abortUpload: _abortUpload, isUploading, progress } = useChunkedUpload({
     accessToken: undefined,
     onError: (error) => {
       setMessage(`Error: ${error}`);
@@ -81,7 +73,7 @@ export default function Home() {
       const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.origin)}`;
       window.location.href = clerkSignInUrl;
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, recipients]);
 
   useEffect(() => {
     if (shareMode === 'link' && user?.primaryEmailAddress?.emailAddress && (!recipients[0] || recipients[0].trim() === '')) {
@@ -747,7 +739,7 @@ export default function Home() {
                     {/* Quick Settings */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                        <Label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           Vervaltijd
                         </Label>
@@ -766,7 +758,7 @@ export default function Home() {
                       </div>
 
                       <div>
-                        <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                        <Label className="text-sm font-medium mb-2 flex items-center gap-2">
                           <Shield className="h-4 w-4" />
                           Beveiliging
                         </Label>

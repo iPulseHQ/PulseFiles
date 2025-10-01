@@ -19,7 +19,7 @@ export default function GoogleAd({
 }: GoogleAdProps) {
   useEffect(() => {
     try {
-      // @ts-ignore
+      // @ts-expect-error - AdSense global variable
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
       console.error('AdSense error:', err);

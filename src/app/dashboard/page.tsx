@@ -8,9 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useUser, useAuth, SignOutButton } from '@clerk/nextjs';
-import { Files, Upload, LogOut, Clock, Download, Share2, Copy, Settings, Key, Plus, Trash2, FileText, Check, ExternalLink, Calendar } from 'lucide-react';
+import { Files, Upload, LogOut, Clock, Download, Copy, Key, Plus, Trash2, FileText, Check, ExternalLink, Calendar } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface SharedFile {
   id: string;
