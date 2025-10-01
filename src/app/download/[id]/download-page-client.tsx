@@ -36,20 +36,35 @@ interface DownloadPageClientProps {
   timeLeft: number;
 }
 
-function formatTimeLeft(milliseconds: number, t: any) {
+function formatTimeLeft(milliseconds: number, t: any, language: string = 'nl') {
   const minutes = Math.floor(milliseconds / (1000 * 60));
   const hours = Math.floor(milliseconds / (1000 * 60 * 60));
   const days = Math.floor(milliseconds / (1000 * 60 * 60 * 24));
   const weeks = Math.floor(milliseconds / (1000 * 60 * 60 * 24 * 7));
 
+  // Fallback translations if t is undefined
+  const fallbackTranslations = language === 'en' ? {
+    weeks: 'weeks',
+    days: 'days',
+    hours: 'hours',
+    minutes: 'minutes'
+  } : {
+    weeks: 'weken',
+    days: 'dagen',
+    hours: 'uur',
+    minutes: 'minuten'
+  };
+  
+  const translations = t || fallbackTranslations;
+
   if (weeks > 0) {
-    return `${weeks} ${t.weeks}`;
+    return `${weeks} ${translations.weeks}`;
   } else if (days > 0) {
-    return `${days} ${t.days}`;
+    return `${days} ${translations.days}`;
   } else if (hours > 0) {
-    return `${hours} ${t.hours}`;
+    return `${hours} ${translations.hours}`;
   } else {
-    return `${minutes} ${t.minutes}`;
+    return `${minutes} ${translations.minutes}`;
   }
 }
 
@@ -361,7 +376,7 @@ export default function DownloadPageClient({
                   )}
                   <div className="flex items-center gap-1.5 px-3 py-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg text-xs font-medium text-green-800 dark:text-green-200">
                     <Clock className="h-3.5 w-3.5" />
-                    {t.expiresIn} {formatTimeLeft(timeLeft, t)}
+                    {t.expiresIn} {formatTimeLeft(timeLeft, t, language)}
                   </div>
                 </div>
 
