@@ -147,27 +147,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (recipients.length === 0) {
+    // Voor email mode is recipients verplicht, voor link mode optioneel
+    if (shareMode === 'email' && recipients.length === 0) {
       return NextResponse.json(
-        { error: 'At least one recipient email is required' },
+        { error: 'At least one recipient email is required for email sharing' },
         { status: 400 }
       );
     }
 
-    // Validate recipient emails
-    const { valid: validEmails, invalid: invalidEmails } = validateEmails(recipients);
-    if (invalidEmails.length > 0) {
-      return NextResponse.json(
-        { error: `Invalid email addresses: ${invalidEmails.join(', ')}` },
-        { status: 400 }
-      );
-    }
+    // Validate recipient emails (if provided)
+    let validEmails: string[] = [];
+    if (recipients.length > 0) {
+      const validation = validateEmails(recipients);
+      validEmails = validation.valid;
+      const invalidEmails = validation.invalid;
+      
+      if (invalidEmails.length > 0) {
+        return NextResponse.json(
+          { error: `Invalid email addresses: ${invalidEmails.join(', ')}` },
+          { status: 400 }
+        );
+      }
 
-    if (validEmails.length > 3) {
-      return NextResponse.json(
-        { error: 'Maximum 3 recipients allowed' },
-        { status: 400 }
-      );
+      if (validEmails.length > 3) {
+        return NextResponse.json(
+          { error: 'Maximum 3 recipients allowed' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate password if password protection is enabled
@@ -345,8 +352,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Hash sensitive data for privacy
-    const primaryEmail = validEmails[0]; // Use first valid email as primary
-    const emailHash = hashEmail(primaryEmail);
+    const primaryEmail = validEmails.length > 0 ? validEmails[0] : null; // Use first valid email as primary (if available)
+    const emailHash = primaryEmail ? hashEmail(primaryEmail) : null;
     const ipHash = hashIP(clientIP);
 
     // Insert main file record
@@ -479,8 +486,8 @@ export async function POST(request: NextRequest) {
             console.error('Email sending error:', emailError);
           }
         }
-      } else {
-        // Send confirmation to uploader with link to share
+      } else if (primaryEmail) {
+        // Send confirmation to uploader with link to share (only if email was provided)
         const { error: emailError } = await resend.emails.send({
           from: 'share@openfiles.app',
           to: [primaryEmail],
