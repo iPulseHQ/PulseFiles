@@ -1,4 +1,4 @@
--- Migration script for enhanced OpenFiles features
+-- Migration script for enhanced PulseFiles features
 -- Run this script in your Supabase SQL editor
 
 -- Add new columns to shared_files table for enhanced features

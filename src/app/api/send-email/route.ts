@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const { to, fileName, shareUrl, expirationDate } = await request.json();
 
     const { data, error } = await resend.emails.send({
-      from: 'share@openfiles.app',
+      from: 'share@PulseFiles.app',
       to: [to],
       subject: `File ready: ${fileName}`,
       html: `

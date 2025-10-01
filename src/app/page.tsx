@@ -421,6 +421,9 @@ export default function Home() {
             </Link>
 
             <div className="flex items-center gap-2">
+              <LanguageToggle />
+              <ThemeToggle />
+
               {user ? (
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm" className="gap-2">
@@ -429,9 +432,9 @@ export default function Home() {
                   </Button>
                 </Link>
               ) : (
-                <Button 
-                  variant="default" 
-                  size="sm" 
+                <Button
+                  variant="default"
+                  size="sm"
                   className="gap-2"
                   onClick={() => {
                     const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.origin)}`;
@@ -442,8 +445,6 @@ export default function Home() {
                   <span className="hidden sm:inline">{t.login}</span>
                 </Button>
               )}
-              <LanguageToggle />
-              <ThemeToggle />
             </div>
           </div>
         </div>

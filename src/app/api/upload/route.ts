@@ -436,7 +436,7 @@ export async function POST(request: NextRequest) {
         // Send to all recipients
         for (const recipientEmail of validEmails) {
           const { error: emailError } = await resend.emails.send({
-            from: 'share@openfiles.app',
+            from: 'share@PulseFiles.app',
             to: [recipientEmail],
             subject: title?.trim() || `File ready: ${sanitizedFileName}`,
             html: `
@@ -489,7 +489,7 @@ export async function POST(request: NextRequest) {
       } else if (primaryEmail) {
         // Send confirmation to uploader with link to share (only if email was provided)
         const { error: emailError } = await resend.emails.send({
-          from: 'share@openfiles.app',
+          from: 'share@PulseFiles.app',
           to: [primaryEmail],
           subject: `Share link generated: ${title?.trim() || sanitizedFileName}`,
           html: `

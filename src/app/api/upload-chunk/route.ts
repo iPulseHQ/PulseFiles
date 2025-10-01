@@ -449,7 +449,7 @@ export async function POST(request: NextRequest) {
           // Send to all recipients
           for (const recipientEmail of session.recipients) {
             const { error: emailError } = await resend.emails.send({
-              from: process.env.EMAIL_FROM_ADDRESS || 'share@openfiles.app',
+              from: process.env.EMAIL_FROM_ADDRESS || 'share@PulseFiles.app',
               to: [recipientEmail],
               subject: session.title || `File ready: ${originalFileName}`,
               html: `
@@ -497,7 +497,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Send confirmation to uploader with link to share
           const { error: emailError } = await resend.emails.send({
-            from: process.env.EMAIL_FROM_ADDRESS || 'share@openfiles.app',
+            from: process.env.EMAIL_FROM_ADDRESS || 'share@PulseFiles.app',
             to: [session.email],
             subject: `Share link generated: ${session.title || originalFileName}`,
             html: `

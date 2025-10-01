@@ -1,4 +1,4 @@
--- OpenFiles Migration Script
+-- PulseFiles Migration Script
 -- Run this in your Supabase SQL Editor to add all missing columns
 
 -- Add missing columns to shared_files table

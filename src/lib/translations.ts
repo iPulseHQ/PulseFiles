@@ -115,6 +115,46 @@ export interface Translations {
   secureFileSharingDescription: string;
   secured: string;
   private: string;
+
+  // Download page
+  linkExpired: string;
+  downloadLimitReached: string;
+  linkExpiredDescription: string;
+  downloadLimitDescription: string;
+  linkExpiredMessage: string;
+  downloadLimitMessage: string;
+  fileInformation: string;
+  folderName: string;
+  fileName: string;
+  size: string;
+  files: string;
+  uploaded: string;
+  downloadsCount: string;
+  messageFromSender: string;
+  passwordProtected: string;
+  authenticationRequired: string;
+  goToHomepage: string;
+  clickToDownload: string;
+  wantToShareFiles: string;
+  uploadYourFiles: string;
+  folderDownload: string;
+  fileDownload: string;
+  folderReady: string;
+  fileReady: string;
+  days: string;
+  weeks: string;
+  hours: string;
+  minutes: string;
+  
+  // Download security messages
+  safeFileDownload: string;
+  safeFileDownloadDescription: string;
+  virusFree: string;
+  virusFreeDescription: string;
+  encryptedTransfer: string;
+  encryptedTransferDescription: string;
+  noMalware: string;
+  noMalwareDescription: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -233,6 +273,46 @@ export const translations: Record<Language, Translations> = {
     secureFileSharingDescription: 'Upload tot 2GB gratis. Bestanden worden automatisch verwijderd na de vervaldatum',
     secured: 'Beveiligd',
     private: 'Privé',
+
+    // Download page
+    linkExpired: 'Link Verlopen',
+    downloadLimitReached: 'Download Limiet Bereikt',
+    linkExpiredDescription: 'Deze download link is verlopen om veiligheidsredenen',
+    downloadLimitDescription: 'Dit bestand heeft zijn maximum aantal downloads bereikt',
+    linkExpiredMessage: 'Deze download link is verlopen om veiligheidsredenen. Neem contact op met de afzender voor een nieuwe link.',
+    downloadLimitMessage: 'Dit bestand is {count} keer gedownload en heeft zijn limiet van {max} downloads bereikt.',
+    fileInformation: 'Bestandsinformatie',
+    folderName: 'Mapnaam:',
+    fileName: 'Bestandsnaam:',
+    size: 'Grootte:',
+    files: 'bestanden',
+    uploaded: 'Geüpload:',
+    downloadsCount: 'Downloads:',
+    messageFromSender: 'Bericht van afzender',
+    passwordProtected: 'Wachtwoord Beveiligd',
+    authenticationRequired: 'Authenticatie Vereist',
+    goToHomepage: 'Ga naar Homepage',
+    clickToDownload: 'Klik op de download knop om je {type} op je apparaat op te slaan',
+    wantToShareFiles: 'Wil je je eigen bestanden veilig delen?',
+    uploadYourFiles: 'Upload Je Bestanden',
+    folderDownload: 'Map Downloaden',
+    fileDownload: 'Bestand Downloaden',
+    folderReady: 'Je map is klaar om te downloaden',
+    fileReady: 'Je bestand is klaar om te downloaden',
+    days: 'dagen',
+    weeks: 'weken',
+    hours: 'uur',
+    minutes: 'minuten',
+    
+    // Download security messages
+    safeFileDownload: 'Veilig Bestanden Downloaden',
+    safeFileDownloadDescription: 'Download je bestanden veilig en zonder zorgen. Alle bestanden worden beveiligd overgedragen.',
+    virusFree: 'Virusvrij',
+    virusFreeDescription: 'Geen virussen',
+    encryptedTransfer: 'Versleuteld',
+    encryptedTransferDescription: 'Beveiligde overdracht',
+    noMalware: 'Geen Malware',
+    noMalwareDescription: 'Schoon en veilig',
   },
   en: {
     // Header
@@ -349,6 +429,46 @@ export const translations: Record<Language, Translations> = {
     secureFileSharingDescription: 'Upload up to 2GB for free. Files are automatically deleted after the expiration date',
     secured: 'Secured',
     private: 'Private',
+
+    // Download page
+    linkExpired: 'Link Expired',
+    downloadLimitReached: 'Download Limit Reached',
+    linkExpiredDescription: 'This download link has expired for security purposes',
+    downloadLimitDescription: 'This file has reached its maximum download limit',
+    linkExpiredMessage: 'This download link has expired for security purposes. Please contact the sender for a new link.',
+    downloadLimitMessage: 'This file has been downloaded {count} times and has reached its limit of {max} downloads.',
+    fileInformation: 'File Information',
+    folderName: 'Folder name:',
+    fileName: 'File name:',
+    size: 'Size:',
+    files: 'files',
+    uploaded: 'Uploaded:',
+    downloadsCount: 'Downloads:',
+    messageFromSender: 'Message from sender',
+    passwordProtected: 'Password Protected',
+    authenticationRequired: 'Authentication Required',
+    goToHomepage: 'Go to Homepage',
+    clickToDownload: 'Click the download button to save your {type} to your device',
+    wantToShareFiles: 'Want to share your own files securely?',
+    uploadYourFiles: 'Upload Your Files',
+    folderDownload: 'Folder Download',
+    fileDownload: 'File Download',
+    folderReady: 'Your folder is ready for download',
+    fileReady: 'Your file is ready for download',
+    days: 'days',
+    weeks: 'weeks',
+    hours: 'hours',
+    minutes: 'minutes',
+    
+    // Download security messages
+    safeFileDownload: 'Safe File Download',
+    safeFileDownloadDescription: 'Download your files safely and worry-free. All files are transferred securely.',
+    virusFree: 'Virus-Free',
+    virusFreeDescription: 'No viruses',
+    encryptedTransfer: 'Encrypted',
+    encryptedTransferDescription: 'Secure transfer',
+    noMalware: 'No Malware',
+    noMalwareDescription: 'Clean and safe',
   },
 };
 

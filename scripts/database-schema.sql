@@ -1,4 +1,4 @@
--- Enhanced OpenFiles Database Schema with Encryption Support
+-- Enhanced PulseFiles Database Schema with Encryption Support
 
 -- Create the shared_files table with encryption fields
 CREATE TABLE IF NOT EXISTS shared_files (
