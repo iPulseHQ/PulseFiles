@@ -437,8 +437,7 @@ export default function Home() {
                   size="sm"
                   className="gap-2"
                   onClick={() => {
-                    const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.origin)}`;
-                    window.location.href = clerkSignInUrl;
+                    window.location.href = '/sign-in';
                   }}
                 >
                   <User className="h-4 w-4" />

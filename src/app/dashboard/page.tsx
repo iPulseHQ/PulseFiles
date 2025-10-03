@@ -148,8 +148,7 @@ export default function DashboardPage() {
     if (!isLoaded) return;
     
     if (!user) {
-      const clerkSignInUrl = `https://lucky-gannet-78.accounts.dev/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
-      window.location.href = clerkSignInUrl;
+      window.location.href = '/sign-in';
       return;
     }
 

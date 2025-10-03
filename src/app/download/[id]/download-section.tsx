@@ -129,7 +129,7 @@ export default function DownloadSection({ shareId, accessControl, isFolder }: Do
         </Alert>
         
         <div className="flex flex-col gap-2">
-          <Link href="/auth">
+          <Link href="/sign-in">
             <Button className="w-full" size="lg">
               <User className="mr-2 h-4 w-4" />
               Sign In to Download

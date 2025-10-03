@@ -64,11 +64,14 @@
       "Bash(find:*)",
       "Bash(rg:*)",
       "Bash(openssl rand:*)",
-      "Bash(npx next lint:*)"
+      "Bash(npx next lint:*)",
+      "Read(//c/Users/Arjan/Documents/pulseguard/**)"
     ],
     "deny": [],
     "additionalDirectories": [
-      "C:\\Users\\Arjan\\Documents\\1. Projecten\\pulsecrm"
+      "C:\\Users\\Arjan\\Documents\\pulseguard",
+      "C:\\Users\\Arjan\\Documents\\1. Projecten\\pulsecrm",
+      "C:\\Users\\Arjan\\Documents\\1. Projecten\\PulseRMM"
     ]
   }
 }
