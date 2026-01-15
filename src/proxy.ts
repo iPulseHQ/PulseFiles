@@ -32,7 +32,7 @@ export default clerkMiddleware(async (auth, req) => {
   ].join('; ');
   
   response.headers.set('Content-Security-Policy', csp);
-  
+
   // Block access to sensitive files
   if (req.nextUrl.pathname.includes('/.env') || 
       req.nextUrl.pathname.includes('/.git') ||

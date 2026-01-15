@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { Databuddy } from '@databuddy/sdk';
+import { Databuddy } from '@databuddy/sdk/react';
 
 export const metadata: Metadata = {
   title: "PulseFiles",
@@ -52,10 +52,7 @@ export default function RootLayout({
                   trackAttributes={true}
                   trackOutgoingLinks={true}
                   trackInteractions={true}
-                  trackEngagement={true}
                   trackScrollDepth={true}
-                  trackExitIntent={true}
-                  trackBounceRate={true}
                   trackWebVitals={true}
                   trackErrors={true}
                   enableBatching={true}
