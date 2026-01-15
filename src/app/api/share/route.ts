@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const expiration = formData.get('expiration') as string || '7days';
+    const client = formData.get('client') as string || null; // Optional client identifier (e.g., 'pulseguard')
     
     if (!file) {
       return NextResponse.json(
@@ -76,9 +77,20 @@ export async function POST(request: NextRequest) {
     const fileId = nanoid(64); // Use 64 chars like other endpoints
     
     // Calculate expiration date
+    // For day-based expirations, calculate from end of current day to ensure full days are shown
     const expirationConfig = EXPIRATION_OPTIONS[expiration as keyof typeof EXPIRATION_OPTIONS];
     const expiresAt = new Date();
-    expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
+    
+    // If expiration is in days (24+ hours), calculate from end of current day
+    if (expirationConfig.hours >= 24) {
+      // Set to end of current day (23:59:59)
+      expiresAt.setHours(23, 59, 59, 999);
+      // Then add the full expiration period
+      expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
+    } else {
+      // For hour-based expirations, use exact time
+      expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
+    }
 
     // Sanitize filename and generate obfuscated key
     const sanitizedFilename = sanitizeFilename(file.name);
@@ -129,7 +141,8 @@ export async function POST(request: NextRequest) {
         is_active: true,
         download_count: 0,
         is_folder: false,
-        created_via: 'api'
+        created_via: 'api',
+        client: client // Store client identifier if provided
       });
 
     if (dbError) {

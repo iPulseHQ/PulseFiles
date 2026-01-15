@@ -11,6 +11,7 @@ import { useUser } from '@clerk/nextjs';
 import DownloadSection from './download-section';
 import Link from 'next/link';
 import ElectricBorder from '@/components/ElectricBorder';
+import Image from 'next/image';
 
 interface FileRecord {
   id: string;
@@ -26,6 +27,7 @@ interface FileRecord {
   max_downloads: number | null;
   download_count: number;
   download_limit_reached: boolean;
+  client: string | null; // Client identifier (e.g., 'pulseguard')
 }
 
 interface DownloadPageClientProps {
@@ -360,6 +362,34 @@ export default function DownloadPageClient({
                 
                 {/* Security badges */}
                 <div className="flex flex-wrap gap-2">
+                  {fileRecord.client && (
+                    <div className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg text-xs font-medium text-purple-800 dark:text-purple-200">
+                      {fileRecord.client === 'pulseguard' ? (
+                        <>
+                          <Image
+                            src="/pulseguard-icon-dark.png"
+                            alt="PulseGuard"
+                            width={14}
+                            height={14}
+                            className="dark:hidden"
+                          />
+                          <Image
+                            src="/pulseguard-icon.png"
+                            alt="PulseGuard"
+                            width={14}
+                            height={14}
+                            className="hidden dark:block"
+                          />
+                          <span>Van PulseGuard</span>
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="h-3.5 w-3.5" />
+                          <span>Van {fileRecord.client}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {fileRecord.access_control === 'password' && (
                     <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-200">
                       <Lock className="h-3.5 w-3.5" />
