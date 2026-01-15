@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 import { isFileExpired } from '@/lib/security';
 import DownloadPageClient from './download-page-client';
 
@@ -10,6 +11,50 @@ const supabase = createClient(
 
 interface DownloadPageProps {
   params: Promise<{ id: string }>;
+}
+
+// Dynamic metadata for download pages
+export async function generateMetadata({ params }: DownloadPageProps): Promise<Metadata> {
+  const { id } = await params;
+  
+  // Fetch file info for metadata
+  const { data: fileRecord } = await supabase
+    .from('shared_files')
+    .select('filename, file_name, file_size')
+    .eq('id', id)
+    .single();
+
+  // If not found by id, try slug
+  const file = fileRecord || (await supabase
+    .from('shared_files')
+    .select('filename, file_name, file_size')
+    .eq('slug', id)
+    .single()).data;
+
+  const filename = file?.filename || file?.file_name || 'Bestand';
+  const fileSize = file?.file_size ? formatBytes(file.file_size) : '';
+  
+  return {
+    title: `Download: ${filename}`,
+    description: `Download ${filename}${fileSize ? ` (${fileSize})` : ''} veilig via PulseFiles. End-to-end versleuteld bestandsdeling.`,
+    robots: {
+      index: false, // Don't index individual download pages
+      follow: false,
+    },
+    openGraph: {
+      title: `Download: ${filename}`,
+      description: `Download dit bestand veilig via PulseFiles met end-to-end encryptie.`,
+      type: 'website',
+    },
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 // Validate share ID format (should be 64 characters long or custom slug 3+ chars)
