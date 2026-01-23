@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/neon';
-import { azureStorage } from '@/lib/azureStorage';
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, isFileExpired, decryptFilename, hashIP } from '@/lib/security';
 import bcrypt from 'bcryptjs';
 import JSZip from 'jszip';
+
+const s3 = new S3Client({
+  region: process.env.DO_REGION,
+  endpoint: `https://${process.env.DO_ENDPOINT}`,
+  credentials: {
+    accessKeyId: process.env.DO_ACCESS_TOKEN!,
+    secretAccessKey: process.env.DO_SECRET_KEY!,
+  },
+});
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 function getClientIP(request: NextRequest): string {
   // Try multiple headers for IP detection
@@ -94,10 +109,15 @@ async function handleDownloadRequest(
       );
     }
 
-    // Get file record from database using Neon
-    const fileRecord = await db.getFileById(id);
+    // Get file record from database with folder contents
+    const { data: fileRecord, error } = await supabase
+      .from('shared_files')
+      .select('*, folder_contents(*)')
+      .eq('id', id)
+      .eq('is_active', true)
+      .single();
 
-    if (!fileRecord) {
+    if (error || !fileRecord) {
       return NextResponse.json(
         { error: 'File not found' },
         { status: 404 }
@@ -145,7 +165,7 @@ async function handleDownloadRequest(
         );
       }
     } else if (fileRecord.access_control === 'authenticated') {
-      // Check if user is authenticated using Clerk
+      // Check if user is authenticated (this would require auth token validation)
       const authHeader = request.headers.get('authorization');
       if (!authHeader?.startsWith('Bearer ')) {
         return NextResponse.json(
@@ -154,8 +174,14 @@ async function handleDownloadRequest(
         );
       }
       
-      // In production, validate Clerk token here
-      // For now, just check if header exists
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Invalid authentication' },
+          { status: 401 }
+        );
+      }
     }
 
     // Decrypt filename if available, otherwise use original
@@ -167,26 +193,24 @@ async function handleDownloadRequest(
     let signedUrl: string;
     let fileName: string;
     
-    if (fileRecord.is_folder) {
-      // Get folder contents from database
-      const folderContents = await db.getFolderContents(fileRecord.id);
-      
-      if (folderContents.length === 0) {
-        return NextResponse.json(
-          { error: 'Folder is empty or contents not found' },
-          { status: 404 }
-        );
-      }
-      
+    if (fileRecord.is_folder && fileRecord.folder_contents && fileRecord.folder_contents.length > 0) {
       // Handle folder download - create ZIP file
       const zip = new JSZip();
       
       // Add each file from folder to ZIP
-      for (const folderFile of folderContents) {
+      for (const folderFile of fileRecord.folder_contents) {
         try {
-          // Get file from Azure Blob Storage
-          const fileBuffer = await azureStorage.getFile(folderFile.s3_key);
-          zip.file(folderFile.file_path, fileBuffer);
+          // Get file from S3
+          const getCommand = new GetObjectCommand({
+            Bucket: process.env.DO_BUCKET_NAME,
+            Key: folderFile.s3_key,
+          });
+          
+          const fileResponse = await s3.send(getCommand);
+          if (fileResponse.Body) {
+            const fileBuffer = await fileResponse.Body.transformToByteArray();
+            zip.file(folderFile.file_path, fileBuffer);
+          }
         } catch (fileError) {
           console.error(`Error adding file ${folderFile.file_path} to ZIP:`, fileError);
           // Continue with other files
@@ -196,22 +220,36 @@ async function handleDownloadRequest(
       // Generate ZIP buffer
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
       
-      // Upload temporary ZIP to Azure
+      // For now, we'll need to upload the ZIP to S3 temporarily
+      // In production, you might want to stream this directly
       const tempZipKey = `temp-zip/${id}-${Date.now()}.zip`;
-      await azureStorage.uploadFile(
-        tempZipKey,
-        zipBuffer,
-        'application/zip'
-      );
+      const zipUploadCommand = new PutObjectCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: tempZipKey,
+        Body: zipBuffer,
+        ContentType: 'application/zip',
+      });
       
-      // Generate signed URL for ZIP download (valid for 5 minutes)
-      signedUrl = azureStorage.generateSignedUrl(tempZipKey, 5);
+      await s3.send(zipUploadCommand);
+      
+      // Generate signed URL for ZIP download
+      const zipDownloadCommand = new GetObjectCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: tempZipKey,
+        ResponseContentDisposition: `attachment; filename="${displayFilename}.zip"`,
+      });
+      
+      signedUrl = await getSignedUrl(s3, zipDownloadCommand, { expiresIn: 300 }); // 5 minutes
       fileName = `${displayFilename}.zip`;
       
-      // Schedule cleanup of temporary ZIP file
+      // Schedule cleanup of temporary ZIP file (in production, use a proper cleanup job)
       setTimeout(async () => {
         try {
-          await azureStorage.deleteFile(tempZipKey);
+          const deleteCommand = new DeleteObjectCommand({
+            Bucket: process.env.DO_BUCKET_NAME,
+            Key: tempZipKey,
+          });
+          await s3.send(deleteCommand);
         } catch (cleanupError) {
           console.error('Error cleaning up temporary ZIP file:', cleanupError);
         }
@@ -219,49 +257,69 @@ async function handleDownloadRequest(
       
     } else {
       // Single file download
-      const blobKey = fileRecord.obfuscated_key;
+      const s3Key = fileRecord.obfuscated_key || fileRecord.file_url.split('/').pop();
       
-      if (!blobKey) {
-        return NextResponse.json(
-          { error: 'File key not found' },
-          { status: 500 }
-        );
-      }
-      
-      // Generate signed URL for secure download from Azure (valid for 5 minutes)
-      signedUrl = azureStorage.generateSignedUrl(blobKey, 5);
+      // Generate signed URL for secure download (valid for 5 minutes)
+      const command = new GetObjectCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: s3Key,
+        ResponseContentDisposition: `attachment; filename="${displayFilename}"`,
+      });
+
+      signedUrl = await getSignedUrl(s3, command, { expiresIn: 300 }); // 5 minutes
       fileName = displayFilename;
     }
 
-    // Update download count and metadata
-    const downloadIPHash = hashIP(clientIP);
-    await db.updateFileDownloadStats(id, clientIP, downloadIPHash);
+    // Use the database function to increment download count and check limits
+    const { error: incrementError } = await supabase
+      .rpc('increment_download_count', { file_id: id });
+    
+    if (incrementError) {
+      console.error('Error incrementing download count:', incrementError);
+      // Continue with download but log the error
+    }
     
     // Log file access
+    const downloadIPHash = hashIP(clientIP);
     const userAgent = request.headers.get('user-agent') || 'unknown';
     
     // Map access control values to valid method values for database constraint
     const getAccessMethod = (accessControl: string) => {
       switch (accessControl) {
         case 'public':
-          return 'direct';
+          return 'download';
         case 'password':
           return 'password';
         case 'authenticated':
           return 'authenticated';
         default:
-          return 'direct';
+          return 'download';
       }
     };
 
-    await db.logFileAccess({
-      shared_file_id: id,
-      ip_address: clientIP,
-      ip_hash: downloadIPHash,
-      user_agent: userAgent,
-      download_successful: true,
-      access_method: getAccessMethod(fileRecord.access_control)
-    });
+    const { error: logError } = await supabase
+      .rpc('log_file_access', {
+        file_id: id,
+        ip_addr: clientIP,
+        ip_hash_val: downloadIPHash,
+        user_agent_val: userAgent,
+        success: true,
+        method: getAccessMethod(fileRecord.access_control)
+      });
+    
+    if (logError) {
+      console.error('Error logging file access:', logError);
+    }
+    
+    // Also update the legacy fields for backwards compatibility
+    await supabase
+      .from('shared_files')
+      .update({ 
+        last_downloaded_at: new Date().toISOString(),
+        last_download_ip: clientIP,
+        last_download_ip_hash: downloadIPHash
+      })
+      .eq('id', id);
 
     // Log download attempt for security monitoring
     console.log(`Secure download: ${id} from IP: ${clientIP} at ${new Date().toISOString()}`);

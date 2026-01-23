@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/neon';
 import { auth } from '@clerk/nextjs/server';
 import { nanoid } from 'nanoid';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Get user's API keys
 export async function GET() {
@@ -17,16 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: apiKeys, error } = await supabase
-      .from('api_keys')
-      .select('id, name, key_preview, created_at, last_used, is_active')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Failed to fetch API keys' }, { status: 500 });
-    }
+    const apiKeys = await db.getApiKeysByUserId(userId);
 
     return NextResponse.json({ apiKeys: apiKeys || [] });
   } catch (error) {
@@ -54,23 +40,12 @@ export async function POST(request: Request) {
     const apiKey = `pf_${nanoid(32)}`;
     const keyPreview = `${apiKey.substring(0, 12)}...${apiKey.substring(apiKey.length - 4)}`;
 
-    const { data, error } = await supabase
-      .from('api_keys')
-      .insert({
-        user_id: userId,
-        name: name.trim(),
-        api_key: apiKey,
-        key_preview: keyPreview,
-        created_at: new Date().toISOString(),
-        is_active: true
-      })
-      .select('id, name, key_preview, created_at')
-      .single();
-
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Failed to create API key' }, { status: 500 });
-    }
+    const data = await db.createApiKey({
+      user_id: userId,
+      name: name.trim(),
+      api_key: apiKey,
+      key_preview: keyPreview
+    });
 
     return NextResponse.json({
       apiKey: {
@@ -100,16 +75,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'API key ID is required' }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from('api_keys')
-      .delete()
-      .eq('id', keyId)
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json({ error: 'Failed to delete API key' }, { status: 500 });
-    }
+    await db.deleteApiKey(keyId, userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { azureStorage } from '@/lib/azureStorage';
-import { db } from '@/lib/neon';
 import { 
   generateSecureShareId, 
   isAllowedFileType, 
@@ -18,6 +18,20 @@ import {
   type AccessControl
 } from '@/lib/security';
 import { escapeHtml } from '@/lib/utils';
+
+const s3 = new S3Client({
+  region: process.env.DO_REGION,
+  endpoint: `https://${process.env.DO_ENDPOINT}`,
+  credentials: {
+    accessKeyId: process.env.DO_ACCESS_TOKEN!,
+    secretAccessKey: process.env.DO_SECRET_KEY!,
+  },
+});
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -40,6 +54,8 @@ function getClientIP(request: NextRequest): string {
   return 'unknown';
 }
 
+// Removed unused function - using validateEmails from security.ts
+
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -51,9 +67,8 @@ function formatFileSize(bytes: number): string {
 // Store for multipart upload sessions (in production, use Redis)
 const uploadSessions = new Map<string, {
   uploadId: string;
-  blockIds: string[];
   fileName: string;
-  blobName: string;
+  parts: Array<{ ETag: string; PartNumber: number }>;
   shareId: string;
   fileSize: number;
   chunkSize: number;
@@ -73,6 +88,15 @@ export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
     
+    // Check if user is authenticated (optional)
+    let currentUser = null;
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      currentUser = user;
+    }
+    
     const formData = await request.formData();
     const action = formData.get('action') as string;
     
@@ -85,20 +109,24 @@ export async function POST(request: NextRequest) {
     
     // Rate limiting - different limits for different actions
     let rateLimitKey = `upload_${clientIP}`;
-    let rateLimitMax = 10;
-    let rateLimitWindow = 60000;
+    let rateLimitMax = 10; // Default for unknown actions
+    let rateLimitWindow = 60000; // 1 minute
 
     if (action === 'init') {
+      // More lenient for initialization
       rateLimitMax = 20;
       rateLimitKey = `upload_init_${clientIP}`;
     } else if (action === 'chunk') {
+      // Very lenient for chunks - allow many chunks per minute
       rateLimitMax = 200;
       rateLimitKey = `upload_chunk_${clientIP}`;
-      rateLimitWindow = 300000;
+      rateLimitWindow = 300000; // 5 minutes for chunks
     } else if (action === 'complete') {
+      // Lenient for completion
       rateLimitMax = 20;
       rateLimitKey = `upload_complete_${clientIP}`;
     } else if (action === 'abort') {
+      // Most lenient for abort
       rateLimitMax = 50;
       rateLimitKey = `upload_abort_${clientIP}`;
     }
@@ -120,12 +148,13 @@ export async function POST(request: NextRequest) {
       const fileName = formData.get('fileName') as string;
       const fileSize = parseInt(formData.get('fileSize') as string);
       const fileType = formData.get('fileType') as string;
-      const chunkSize = parseInt(formData.get('chunkSize') as string) || 1 * 1024 * 1024;
+      const chunkSize = parseInt(formData.get('chunkSize') as string) || 1 * 1024 * 1024; // Default 1MB
       const email = formData.get('email') as string;
       const recipients = JSON.parse(formData.get('recipients') as string || '[]') as string[];
       const title = (formData.get('title') as string)?.trim() || '';
       const message = (formData.get('message') as string)?.trim() || '';
       
+      // Sanitize inputs to prevent XSS
       const sanitizedTitle = title.length > 0 ? escapeHtml(title.substring(0, 200)) : '';
       const sanitizedMessage = message.length > 0 ? escapeHtml(message.substring(0, 1000)) : '';
       const shareMode = (formData.get('shareMode') as 'email' | 'link') || 'email';
@@ -142,6 +171,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      // Set default file type if empty
       const actualFileType = fileType || 'application/octet-stream';
 
       // Validate recipients
@@ -162,6 +192,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Validate password if password protection is enabled
       if (accessControl === 'password' && !password?.trim()) {
         return NextResponse.json(
           { error: 'Password is required for password-protected files' },
@@ -184,11 +215,12 @@ export async function POST(request: NextRequest) {
       }
 
       const sanitizedFileName = sanitizeFilename(fileName);
-      const blobName = `${Date.now()}-${sanitizedFileName}`;
+      const s3FileName = `${Date.now()}-${sanitizedFileName}`;
       
-      // Generate share ID
+      // Generate share ID - use custom slug if provided, otherwise generate secure ID
       let shareId: string;
       if (customSlug && customSlug.trim().length > 0) {
+        // Validate custom slug
         const cleanSlug = customSlug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
         if (cleanSlug.length < 3) {
           return NextResponse.json(
@@ -198,7 +230,12 @@ export async function POST(request: NextRequest) {
         }
         
         // Check if custom slug already exists
-        const existingFile = await db.getFileById(cleanSlug);
+        const { data: existingFile } = await supabase
+          .from('shared_files')
+          .select('id')
+          .eq('id', cleanSlug)
+          .single();
+        
         if (existingFile) {
           return NextResponse.json(
             { error: 'Custom link already exists. Please choose a different one.' },
@@ -213,19 +250,36 @@ export async function POST(request: NextRequest) {
       
       const expirationDate = generateExpirationDate(expirationOption);
 
-      // Create multipart upload in Azure
-      const uploadId = await azureStorage.createMultipartUpload(blobName, actualFileType);
+      // Create multipart upload
+      const createMultipartCommand = new CreateMultipartUploadCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: s3FileName,
+        ContentType: actualFileType,
+        Metadata: {
+          'original-name': sanitizedFileName,
+          'upload-ip': clientIP,
+          'share-id': shareId
+        }
+      });
+
+      const multipartResponse = await s3.send(createMultipartCommand);
+      
+      if (!multipartResponse.UploadId) {
+        return NextResponse.json(
+          { error: 'Failed to initialize upload' },
+          { status: 500 }
+        );
+      }
 
       // Store session
       uploadSessions.set(shareId, {
-        uploadId,
-        blockIds: [],
-        fileName: sanitizedFileName,
-        blobName,
+        uploadId: multipartResponse.UploadId,
+        fileName: s3FileName,
+        parts: [],
         shareId,
         fileSize,
-        chunkSize,
-        email: validatedEmails[0],
+        chunkSize: chunkSize,
+        email: validatedEmails[0], // Primary email for backward compatibility
         recipients: validatedEmails,
         title: sanitizedTitle || sanitizedFileName,
         message: sanitizedMessage,
@@ -240,7 +294,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         sessionId: shareId,
-        uploadId: uploadId
+        uploadId: multipartResponse.UploadId
       });
 
     } else if (action === 'chunk') {
@@ -266,20 +320,33 @@ export async function POST(request: NextRequest) {
 
       const chunkBuffer = Buffer.from(await chunk.arrayBuffer());
 
-      // Upload part to Azure
-      const blockId = await azureStorage.uploadPart(
-        session.blobName,
-        chunkNumber,
-        chunkBuffer
-      );
+      const uploadPartCommand = new UploadPartCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: session.fileName,
+        PartNumber: chunkNumber,
+        UploadId: session.uploadId,
+        Body: chunkBuffer,
+      });
 
-      // Store block ID
-      session.blockIds[chunkNumber - 1] = blockId;
+      const partResponse = await s3.send(uploadPartCommand);
+      
+      if (!partResponse.ETag) {
+        return NextResponse.json(
+          { error: 'Failed to upload chunk' },
+          { status: 500 }
+        );
+      }
+
+      // Store part info
+      session.parts[chunkNumber - 1] = {
+        ETag: partResponse.ETag,
+        PartNumber: chunkNumber
+      };
 
       return NextResponse.json({
         success: true,
         chunkNumber,
-        blockId
+        etag: partResponse.ETag
       });
 
     } else if (action === 'complete') {
@@ -301,11 +368,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Filter out empty block IDs
-      const validBlockIds = session.blockIds.filter(id => id);
+      // Filter out empty parts and sort by part number
+      const validParts = session.parts.filter(part => part && part.ETag);
       
-      // Complete multipart upload in Azure
-      await azureStorage.completeMultipartUpload(session.blobName, validBlockIds);
+      const completeMultipartCommand = new CompleteMultipartUploadCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: session.fileName,
+        UploadId: session.uploadId,
+        MultipartUpload: {
+          Parts: validParts
+        }
+      });
+
+      await s3.send(completeMultipartCommand);
 
       // Hash password if needed
       let passwordHash: string | null = null;
@@ -317,42 +392,56 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate encrypted filename and hash data
-      const { encrypted: encryptedFilename, salt: filenameSalt } = encryptFilename(session.fileName);
+      const originalFileName = session.fileName.split('-').slice(1).join('-');
+      const { encrypted: encryptedFilename, salt: filenameSalt } = encryptFilename(originalFileName);
       const emailHash = hashEmail(session.email);
       const ipHash = hashIP(session.clientIP);
 
-      // Get file URL (this will be Azure blob URL but we'll use signed URLs for access)
-      const fileUrl = `azure://${process.env.AZURE_STORAGE_CONTAINER_NAME}/${session.blobName}`;
+      // Save to database
+      const fileUrl = `https://${process.env.DO_BUCKET_NAME}.${process.env.DO_ENDPOINT}/${session.fileName}`;
       
-      // Save to database using db utility
-      await db.createFile({
-        id: session.shareId,
-        user_id: null,
-        file_name: session.fileName,
-        encrypted_filename: encryptedFilename,
-        filename_salt: filenameSalt,
-        file_url: fileUrl,
-        obfuscated_key: session.blobName,
-        file_size: session.fileSize,
-        file_type: 'application/octet-stream',
-        email: session.email,
-        email_hash: emailHash,
-        recipients: session.recipients,
-        title: session.title,
-        message: session.message || null,
-        ip_address: session.clientIP,
-        ip_hash: ipHash,
-        access_control: session.accessControl,
-        password_hash: passwordHash,
-        password_salt: passwordSalt,
-        is_folder: false,
-        folder_name: null,
-        total_files: 1,
-        max_downloads: session.maxDownloads,
-        expires_at: session.expirationDate.toISOString()
-      });
+      const { error: dbError } = await supabase
+        .from('shared_files')
+        .insert({
+          id: session.shareId,
+          user_id: currentUser?.id || null,
+          file_name: originalFileName,
+          encrypted_filename: encryptedFilename,
+          filename_salt: filenameSalt,
+          file_url: fileUrl,
+          obfuscated_key: session.fileName,
+          file_size: session.fileSize,
+          file_type: 'application/octet-stream',
+          email: session.email,
+          email_hash: emailHash,
+          recipients: session.recipients,
+          title: session.title,
+          message: session.message || null,
+          ip_address: session.clientIP,
+          ip_hash: ipHash,
+          access_control: session.accessControl,
+          password_hash: passwordHash,
+          password_salt: passwordSalt,
+          is_folder: false,
+          folder_name: null,
+          total_files: 1,
+          max_downloads: session.maxDownloads,
+          expires_at: session.expirationDate.toISOString(),
+          created_at: new Date().toISOString(),
+          download_count: 0,
+          is_active: true,
+          download_limit_reached: false
+        });
 
-      // Send email
+      if (dbError) {
+        console.error('Database error:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to save file record' },
+          { status: 500 }
+        );
+      }
+
+      // Send email - different content based on share mode
       const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/download/${session.shareId}`;
       
       try {
@@ -362,10 +451,10 @@ export async function POST(request: NextRequest) {
             const { error: emailError } = await resend.emails.send({
               from: process.env.EMAIL_FROM_ADDRESS || 'share@PulseFiles.app',
               to: [recipientEmail],
-              subject: session.title || `File ready: ${session.fileName}`,
+              subject: session.title || `File ready: ${originalFileName}`,
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-                  <h2>${session.title || `File shared: ${session.fileName}`}</h2>
+                  <h2>${session.title || `File shared: ${originalFileName}`}</h2>
                   
                   ${session.message ? `
                     <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
@@ -374,7 +463,7 @@ export async function POST(request: NextRequest) {
                   ` : ''}
                   
                   <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                    <p style="margin: 0;"><strong>File:</strong> ${session.fileName}</p>
+                    <p style="margin: 0;"><strong>File:</strong> ${originalFileName}</p>
                     <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(session.fileSize)}</p>
                     ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                     ${session.maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${session.maxDownloads} times</p>` : ''}
@@ -406,16 +495,16 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          // Send confirmation to uploader
+          // Send confirmation to uploader with link to share
           const { error: emailError } = await resend.emails.send({
             from: process.env.EMAIL_FROM_ADDRESS || 'share@PulseFiles.app',
             to: [session.email],
-            subject: `Share link generated: ${session.title || session.fileName}`,
+            subject: `Share link generated: ${session.title || originalFileName}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
                 <h2>Your share link has been generated!</h2>
                 
-                <p>Your file <strong>${session.title || session.fileName}</strong> has been uploaded successfully.</p>
+                <p>Your file <strong>${session.title || originalFileName}</strong> has been uploaded successfully.</p>
                 
                 ${session.message ? `
                   <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
@@ -425,7 +514,7 @@ export async function POST(request: NextRequest) {
                 ` : ''}
                 
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 0;"><strong>File:</strong> ${session.fileName}</p>
+                  <p style="margin: 0;"><strong>File:</strong> ${originalFileName}</p>
                   <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(session.fileSize)}</p>
                   ${session.accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
                   ${session.maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${session.maxDownloads} times</p>` : ''}
@@ -436,6 +525,9 @@ export async function POST(request: NextRequest) {
                   <p style="margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 14px; color: #0d47a1; background: white; padding: 10px; border-radius: 3px;">
                     ${shareUrl}
                   </p>
+                  <button onclick="navigator.clipboard.writeText('${shareUrl}')" style="background-color: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    Copy Link
+                  </button>
                 </div>
                 
                 <p style="color: #666; font-size: 14px;">
@@ -491,13 +583,13 @@ export async function POST(request: NextRequest) {
 
       const session = uploadSessions.get(sessionId);
       if (session) {
-        // Azure doesn't need explicit abort - uncommitted blocks are automatically cleaned up after 7 days
-        // But we can optionally delete the blob if it exists
-        try {
-          await azureStorage.deleteFile(session.blobName);
-        } catch (error) {
-          // Ignore errors - blob might not exist yet
-        }
+        const abortCommand = new AbortMultipartUploadCommand({
+          Bucket: process.env.DO_BUCKET_NAME,
+          Key: session.fileName,
+          UploadId: session.uploadId
+        });
+
+        await s3.send(abortCommand);
         uploadSessions.delete(sessionId);
       }
 

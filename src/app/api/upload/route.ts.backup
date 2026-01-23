@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { db } from '@/lib/neon';
-import { azureStorage } from '@/lib/azureStorage';
 import { 
   generateSecureShareId, 
   isAllowedFileType, 
@@ -19,7 +19,20 @@ import {
   type ExpirationOption,
   type AccessControl
 } from '@/lib/security';
-import { auth } from '@clerk/nextjs/server';
+
+const s3 = new S3Client({
+  region: process.env.DO_REGION,
+  endpoint: `https://${process.env.DO_ENDPOINT}`,
+  credentials: {
+    accessKeyId: process.env.DO_ACCESS_TOKEN!,
+    secretAccessKey: process.env.DO_SECRET_KEY!,
+  },
+});
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -38,6 +51,8 @@ function getClientIP(request: NextRequest): string {
   return 'unknown';
 }
 
+// Removed unused function - using validateEmails from security.ts
+
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -50,10 +65,8 @@ export async function POST(request: NextRequest) {
   try {
     // Check required environment variables
     const requiredEnvVars = [
-      'DATABASE_URL', 
-      'AZURE_STORAGE_CONNECTION_STRING',
-      'NEXT_PUBLIC_SITE_URL', 
-      'RESEND_API_KEY'
+      'DO_REGION', 'DO_ENDPOINT', 'DO_ACCESS_TOKEN', 'DO_SECRET_KEY', 'DO_BUCKET_NAME',
+      'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SITE_URL', 'RESEND_API_KEY'
     ];
 
     for (const envVar of requiredEnvVars) {
@@ -88,13 +101,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is authenticated (optional) - using Clerk
-    let currentUserId: string | null = null;
-    try {
-      const { userId } = await auth();
-      currentUserId = userId;
-    } catch {
-      // User not authenticated - that's okay for uploads
+    // Check if user is authenticated (optional)
+    let currentUser = null;
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      currentUser = user;
     }
 
     // Handle large file uploads with better error handling
@@ -236,7 +249,11 @@ export async function POST(request: NextRequest) {
       }
       
       // Check if custom slug already exists
-      const existingFile = await db.getFileById(cleanSlug);
+      const { data: existingFile } = await supabase
+        .from('shared_files')
+        .select('id')
+        .eq('id', cleanSlug)
+        .single();
       
       if (existingFile) {
         return NextResponse.json(
@@ -250,7 +267,7 @@ export async function POST(request: NextRequest) {
       shareId = generateSecureShareId();
     }
     
-    // Generate obfuscated Azure key for single files
+    // Generate obfuscated S3 key for single files
     const obfuscatedKey = isFolder ? null : generateObfuscatedKey(sanitizedFileName, shareId);
     
     // Hash password if password protection is enabled
@@ -275,7 +292,8 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     if (isFolder && files.length > 0) {
-      // Handle folder upload - upload files to Azure Blob Storage
+      // Handle folder upload - create a ZIP file or upload individual files
+      // For now, let's upload files individually and track them
       const baseKey = `folders/${shareId}`;
       
       for (let i = 0; i < files.length; i++) {
@@ -284,18 +302,27 @@ export async function POST(request: NextRequest) {
         const fileKey = `${baseKey}/${relativePath}`;
         const fileBuffer = Buffer.from(await currentFile.arrayBuffer());
         
-        // Upload to Azure Blob Storage
-        await azureStorage.uploadFile(
-          fileKey,
-          fileBuffer,
-          currentFile.type || 'application/octet-stream'
-        );
+        const uploadCommand = new PutObjectCommand({
+          Bucket: process.env.DO_BUCKET_NAME,
+          Key: fileKey,
+          Body: fileBuffer,
+          ACL: 'private',
+          ContentType: currentFile.type,
+          Metadata: {
+            'share-id': shareId,
+            'file-index': i.toString(),
+            'total-files': files.length.toString(),
+            'upload-date': new Date().toISOString()
+          }
+        });
+
+        await s3.send(uploadCommand);
         
         folderContents.push({
           filePath: relativePath,
           fileName: currentFile.name,
           fileSize: currentFile.size,
-          fileType: currentFile.type || 'application/octet-stream',
+          fileType: currentFile.type,
           s3Key: fileKey
         });
       }
@@ -305,26 +332,36 @@ export async function POST(request: NextRequest) {
       // Single file upload
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       
-      // Upload to Azure Blob Storage
-      fileUrl = await azureStorage.uploadFile(
-        obfuscatedKey!,
-        fileBuffer,
-        file.type || 'application/octet-stream'
-      );
+      const uploadCommand = new PutObjectCommand({
+        Bucket: process.env.DO_BUCKET_NAME,
+        Key: obfuscatedKey!,
+        Body: fileBuffer,
+        ACL: 'private',
+        ContentType: file.type,
+        Metadata: {
+          'share-id': shareId,
+          'file-size': file.size.toString(),
+          'upload-date': new Date().toISOString()
+        }
+      });
+
+      await s3.send(uploadCommand);
+      fileUrl = `https://${process.env.DO_BUCKET_NAME}.${process.env.DO_ENDPOINT}/${obfuscatedKey}`;
     } else {
       throw new Error('No file or folder to upload');
     }
     
     // Hash sensitive data for privacy
-    const primaryEmail = validEmails.length > 0 ? validEmails[0] : null;
+    const primaryEmail = validEmails.length > 0 ? validEmails[0] : null; // Use first valid email as primary (if available)
     const emailHash = primaryEmail ? hashEmail(primaryEmail) : null;
     const ipHash = hashIP(clientIP);
 
-    // Insert main file record using Neon database
-    try {
-      await db.createFile({
+    // Insert main file record
+    const { error: dbError } = await supabase
+      .from('shared_files')
+      .insert({
         id: shareId,
-        user_id: currentUserId,
+        user_id: currentUser?.id || null,
         file_name: sanitizedFileName,
         encrypted_filename: encryptedFilename,
         filename_salt: filenameSalt,
@@ -332,9 +369,9 @@ export async function POST(request: NextRequest) {
         obfuscated_key: isFolder ? null : obfuscatedKey,
         file_size: totalSize,
         file_type: isFolder ? 'folder' : (file?.type || 'application/octet-stream'),
-        email: primaryEmail,
+        email: primaryEmail, // Keep primary email for backwards compatibility
         email_hash: emailHash,
-        recipients: validEmails,
+        recipients: validEmails, // Array of all recipients
         title: title?.trim() || sanitizedFileName,
         message: message?.trim() || null,
         ip_address: clientIP,
@@ -347,14 +384,21 @@ export async function POST(request: NextRequest) {
         total_files: isFolder ? files.length : 1,
         max_downloads: maxDownloads,
         expires_at: expirationDate.toISOString(),
-        created_via: 'web'
+        created_at: new Date().toISOString(),
+        download_count: 0,
+        is_active: true,
+        download_limit_reached: false
       });
-    } catch (dbError: any) {
+
+    if (dbError) {
       console.error('Database error:', dbError);
       
+      // Provide more specific error message
       let errorMessage = 'Failed to save file record';
       if (dbError.message?.includes('download_count')) {
         errorMessage = 'Database schema needs updating. Please run the database migration script.';
+      } else if (dbError.code === 'PGRST204') {
+        errorMessage = 'Database table is missing required columns. Please check the database schema.';
       }
       
       return NextResponse.json(
@@ -365,18 +409,20 @@ export async function POST(request: NextRequest) {
 
     // Insert folder contents if this is a folder upload
     if (isFolder && folderContents.length > 0) {
-      try {
-        for (const content of folderContents) {
-          await db.createFolderContent({
-            shared_file_id: shareId,
-            file_path: content.filePath,
-            file_name: content.fileName,
-            file_size: content.fileSize,
-            file_type: content.fileType,
-            s3_key: content.s3Key
-          });
-        }
-      } catch (folderError) {
+      const folderRecords = folderContents.map(content => ({
+        shared_file_id: shareId,
+        file_path: content.filePath,
+        file_name: content.fileName,
+        file_size: content.fileSize,
+        file_type: content.fileType,
+        s3_key: content.s3Key
+      }));
+
+      const { error: folderError } = await supabase
+        .from('folder_contents')
+        .insert(folderRecords);
+
+      if (folderError) {
         console.error('Folder contents error:', folderError);
         // Don't fail the upload, just log the error
       }
@@ -390,7 +436,7 @@ export async function POST(request: NextRequest) {
         // Send to all recipients
         for (const recipientEmail of validEmails) {
           const { error: emailError } = await resend.emails.send({
-            from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
+            from: 'share@PulseFiles.app',
             to: [recipientEmail],
             subject: title?.trim() || `File ready: ${sanitizedFileName}`,
             html: `
@@ -443,7 +489,7 @@ export async function POST(request: NextRequest) {
       } else if (primaryEmail) {
         // Send confirmation to uploader with link to share (only if email was provided)
         const { error: emailError } = await resend.emails.send({
-          from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`,
+          from: 'share@PulseFiles.app',
           to: [primaryEmail],
           subject: `Share link generated: ${title?.trim() || sanitizedFileName}`,
           html: `
@@ -452,15 +498,47 @@ export async function POST(request: NextRequest) {
               
               <p>Your ${isFolder ? 'folder' : 'file'} <strong>${title?.trim() || sanitizedFileName}</strong> has been uploaded successfully.</p>
               
+              ${message?.trim() ? `
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+                  <p style="margin: 0; font-weight: bold; color: #495057;">Your message:</p>
+                  <p style="margin: 5px 0 0 0; font-style: italic; color: #495057;">"${message.trim()}"</p>
+                </div>
+              ` : ''}
+              
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                ${isFolder ? `
+                  <p style="margin: 0;"><strong>Folder:</strong> ${sanitizedFileName}</p>
+                  <p style="margin: 5px 0 0 0; color: #666;"><strong>Files:</strong> ${files.length} files, ${formatFileSize(totalSize)}</p>
+                ` : `
+                  <p style="margin: 0;"><strong>File:</strong> ${sanitizedFileName}</p>
+                  <p style="margin: 5px 0 0 0; color: #666;"><strong>Size:</strong> ${formatFileSize(totalSize)}</p>
+                `}
+                ${accessControl === 'password' ? '<p style="margin: 5px 0 0 0; color: #e74c3c;"><strong>Password protected</strong></p>' : ''}
+                ${maxDownloads ? `<p style="margin: 5px 0 0 0; color: #666;"><strong>Download limit:</strong> ${maxDownloads} times</p>` : ''}
+              </div>
+              
               <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #bbdefb;">
                 <p style="margin: 0; font-weight: bold; color: #1976d2;">Share this link:</p>
                 <p style="margin: 10px 0; word-break: break-all; font-family: monospace; font-size: 14px; color: #0d47a1; background: white; padding: 10px; border-radius: 3px;">
                   ${shareUrl}
                 </p>
+                <button onclick="navigator.clipboard.writeText('${shareUrl}')" style="background-color: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                  Copy Link
+                </button>
               </div>
               
               <p style="color: #666; font-size: 14px;">
                 Link expires: ${expirationDate.toLocaleDateString()}
+              </p>
+              
+              ${accessControl === 'password' ? `
+                <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7;">
+                  <p style="margin: 0; color: #856404;"><strong>Password Protection:</strong> Recipients will need the password you set to access this ${isFolder ? 'folder' : 'file'}.</p>
+                </div>
+              ` : ''}
+              
+              <p style="color: #666; font-size: 12px; margin-top: 20px;">
+                Copy and share this link with anyone you want to give access to your ${isFolder ? 'folder' : 'file'}.
               </p>
               
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">

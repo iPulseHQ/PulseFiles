@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/neon';
 import { decryptFilename } from '@/lib/security';
 import { auth } from '@clerk/nextjs/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function GET() {
   try {
@@ -22,44 +17,17 @@ export async function GET() {
 
     console.log('Clerk User ID:', userId);
     
-    // Get user's files from database
-    let files: Record<string, unknown>[] = [];
-    let error: Error | null = null;
-    
-    try {
-      // Try to get files by user_id
-      const result = await supabase
-        .from('shared_files')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      files = result.data || [];
-      error = result.error;
-    } catch {
-      console.log('Direct user_id query failed, trying alternative approach');
-      
-      // Alternative: Get recent files (for now just return empty array)
-      files = [];
-      error = null;
-    }
-
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch files' },
-        { status: 500 }
-      );
-    }
+    // Get user's files from database using Neon
+    const files = await db.getFilesByUserId(userId);
 
     // Decrypt filenames for display
-    const filesWithDecryptedNames = files?.map((file: Record<string, unknown>) => {
+    const filesWithDecryptedNames = files?.map((file: any) => {
       let displayName = file.file_name;
       
       // Decrypt filename if encrypted data is available
       if (file.encrypted_filename && file.filename_salt) {
         try {
-          displayName = decryptFilename(String(file.encrypted_filename), String(file.filename_salt));
+          displayName = decryptFilename(file.encrypted_filename, file.filename_salt);
         } catch (error) {
           console.error('Failed to decrypt filename:', error);
           // Fallback to original filename

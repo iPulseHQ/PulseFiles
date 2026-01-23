@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
-import { azureStorage } from '@/lib/azureStorage';
-import { db } from '@/lib/neon';
 import { EXPIRATION_OPTIONS, generateObfuscatedKey, sanitizeFilename } from '@/lib/security';
+
+const s3 = new S3Client({
+  region: process.env.DO_REGION,
+  endpoint: `https://${process.env.DO_ENDPOINT}`,
+  credentials: {
+    accessKeyId: process.env.DO_ACCESS_TOKEN!,
+    secretAccessKey: process.env.DO_SECRET_KEY!,
+  },
+});
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Share API endpoint for developers
 export async function POST(request: NextRequest) {
@@ -17,10 +31,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify API key using Neon database
-    const keyData = await db.getApiKey(apiKey);
+    // Verify API key
+    const { data: keyData, error: keyError } = await supabase
+      .from('api_keys')
+      .select('user_id, is_active')
+      .eq('api_key', apiKey)
+      .eq('is_active', true)
+      .single();
 
-    if (!keyData || !keyData.is_active) {
+    if (keyError || !keyData) {
       return NextResponse.json(
         { error: 'Invalid API key' },
         { status: 401 }
@@ -28,13 +47,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Update last used timestamp
-    await db.updateApiKeyLastUsed(apiKey);
+    await supabase
+      .from('api_keys')
+      .update({ last_used: new Date().toISOString() })
+      .eq('api_key', apiKey);
 
     // Parse request body
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const expiration = formData.get('expiration') as string || '7days';
-    const client = formData.get('client') as string || null;
+    const client = formData.get('client') as string || null; // Optional client identifier (e.g., 'pulseguard')
     
     if (!file) {
       return NextResponse.json(
@@ -52,16 +74,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique file ID
-    const fileId = nanoid(64);
+    const fileId = nanoid(64); // Use 64 chars like other endpoints
     
     // Calculate expiration date
+    // For day-based expirations, calculate from end of current day to ensure full days are shown
     const expirationConfig = EXPIRATION_OPTIONS[expiration as keyof typeof EXPIRATION_OPTIONS];
     const expiresAt = new Date();
     
+    // If expiration is in days (24+ hours), calculate from end of current day
     if (expirationConfig.hours >= 24) {
+      // Set to end of current day (23:59:59)
       expiresAt.setHours(23, 59, 59, 999);
+      // Then add the full expiration period
       expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
     } else {
+      // For hour-based expirations, use exact time
       expiresAt.setTime(expiresAt.getTime() + expirationConfig.hours * 60 * 60 * 1000);
     }
 
@@ -72,9 +99,20 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer for storage
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to Azure Blob Storage
+    // Store in DigitalOcean Spaces
+    const uploadCommand = new PutObjectCommand({
+      Bucket: process.env.DO_BUCKET_NAME,
+      Key: obfuscatedKey,
+      Body: buffer,
+      ContentType: file.type,
+      Metadata: {
+        'original-filename': sanitizedFilename,
+        'upload-source': 'api',
+      },
+    });
+
     try {
-      await azureStorage.uploadFile(obfuscatedKey, buffer, file.type);
+      await s3.send(uploadCommand);
     } catch (uploadError) {
       console.error('Upload error:', uploadError);
       return NextResponse.json(
@@ -83,27 +121,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate file URL (Azure blob reference)
-    const fileUrl = `azure://${process.env.AZURE_STORAGE_CONTAINER_NAME}/${obfuscatedKey}`;
+    // Generate file URL for DigitalOcean Spaces
+    const fileUrl = `https://${process.env.DO_ENDPOINT}/${process.env.DO_BUCKET_NAME}/${obfuscatedKey}`;
 
-    // Save to Neon database
-    await db.createFile({
-      id: fileId,
-      user_id: keyData.user_id,
-      file_name: sanitizedFilename,
-      file_size: file.size,
-      file_type: file.type,
-      file_url: fileUrl,
-      obfuscated_key: obfuscatedKey,
-      email: '',
-      expires_at: expiresAt.toISOString(),
-      access_control: 'public',
-      is_active: true,
-      download_count: 0,
-      is_folder: false,
-      created_via: 'api',
-      client: client
-    });
+    // Save to database
+    const { error: dbError } = await supabase
+      .from('shared_files')
+      .insert({
+        id: fileId,
+        user_id: keyData.user_id,
+        file_name: sanitizedFilename,
+        file_size: file.size,
+        file_type: file.type,
+        file_url: fileUrl,
+        obfuscated_key: obfuscatedKey,
+        email: '', // API uploads don't have email
+        expires_at: expiresAt.toISOString(),
+        access_control: 'public',
+        is_active: true,
+        download_count: 0,
+        is_folder: false,
+        created_via: 'api',
+        client: client // Store client identifier if provided
+      });
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      // Clean up uploaded file - we don't need to remove from Supabase storage anymore
+      return NextResponse.json(
+        { error: 'Failed to save file metadata' },
+        { status: 500 }
+      );
+    }
 
     // Return share URL
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pulsefiles.app';

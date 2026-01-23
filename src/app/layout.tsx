@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProvider } from '@clerk/nextjs';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Databuddy } from '@databuddy/sdk/react';
 
@@ -150,29 +149,27 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <ClerkProvider>
-          <AuthProvider>
-            <LanguageProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-              >
-                {children}
-                <Databuddy
-                  clientId="kPYGRD-TUMGUcNMsZ1RHY"
-                  trackHashChanges={true}
-                  trackAttributes={true}
-                  trackOutgoingLinks={true}
-                  trackInteractions={true}
-                  trackScrollDepth={true}
-                  trackWebVitals={true}
-                  trackErrors={true}
-                  enableBatching={true}
-                />
-              </ThemeProvider>
-            </LanguageProvider>
-          </AuthProvider>
+          <LanguageProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Databuddy
+                clientId="kPYGRD-TUMGUcNMsZ1RHY"
+                trackHashChanges={true}
+                trackAttributes={true}
+                trackOutgoingLinks={true}
+                trackInteractions={true}
+                trackScrollDepth={true}
+                trackWebVitals={true}
+                trackErrors={true}
+                enableBatching={true}
+              />
+            </ThemeProvider>
+          </LanguageProvider>
         </ClerkProvider>
       </body>
     </html>

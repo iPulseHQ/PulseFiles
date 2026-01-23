@@ -1,5 +1,4 @@
 import { randomBytes, createCipheriv, createDecipheriv, scryptSync, createHash } from 'crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
 
@@ -270,56 +269,6 @@ export function checkRateLimit(
   }
   
   inMemoryStore.set(ip, { count: userLimit.count + 1, resetTime: userLimit.resetTime });
-  return true;
-}
-
-// Database-based rate limiting for production (optional enhancement)
-export async function checkRateLimitDB(
-  supabase: SupabaseClient,
-  ip: string,
-  maxRequests: number = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10'),
-  windowMs: number = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000')
-): Promise<boolean> {
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - windowMs);
-  const ipHash = hashIP(ip);
-  
-  // Clean up old entries
-  await supabase
-    .from('rate_limits')
-    .delete()
-    .lt('reset_time', windowStart.toISOString());
-  
-  // Get current count
-  const { data: existing } = await supabase
-    .from('rate_limits')
-    .select('count, reset_time')
-    .eq('ip_hash', ipHash)
-    .gte('reset_time', windowStart.toISOString())
-    .single();
-  
-  if (!existing) {
-    // First request in window
-    await supabase
-      .from('rate_limits')
-      .upsert({
-        ip_hash: ipHash,
-        count: 1,
-        reset_time: new Date(now.getTime() + windowMs).toISOString()
-      });
-    return true;
-  }
-  
-  if (existing.count >= maxRequests) {
-    return false;
-  }
-  
-  // Increment count
-  await supabase
-    .from('rate_limits')
-    .update({ count: existing.count + 1 })
-    .eq('ip_hash', ipHash);
-    
   return true;
 }
 

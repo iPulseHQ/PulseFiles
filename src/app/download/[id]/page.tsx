@@ -1,13 +1,26 @@
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/neon';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { isFileExpired } from '@/lib/security';
 import DownloadPageClient from './download-page-client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Import FileRecord type from client component
+interface FileRecord {
+  id: string;
+  file_name: string;
+  file_size: number;
+  title: string | null;
+  message: string | null;
+  is_folder: boolean;
+  total_files: number | null;
+  created_at: string;
+  expires_at: string;
+  access_control: string;
+  max_downloads: number | null;
+  download_count: number;
+  download_limit_reached: boolean;
+  client: string | null;
+}
 
 interface DownloadPageProps {
   params: Promise<{ id: string }>;
@@ -17,21 +30,10 @@ interface DownloadPageProps {
 export async function generateMetadata({ params }: DownloadPageProps): Promise<Metadata> {
   const { id } = await params;
   
-  // Fetch file info for metadata
-  const { data: fileRecord } = await supabase
-    .from('shared_files')
-    .select('filename, file_name, file_size')
-    .eq('id', id)
-    .single();
+  // Fetch file info for metadata using Neon
+  const file = await db.getFileById(id);
 
-  // If not found by id, try slug
-  const file = fileRecord || (await supabase
-    .from('shared_files')
-    .select('filename, file_name, file_size')
-    .eq('slug', id)
-    .single()).data;
-
-  const filename = file?.filename || file?.file_name || 'Bestand';
+  const filename = file?.file_name || 'Bestand';
   const fileSize = file?.file_size ? formatBytes(file.file_size) : '';
   
   return {
@@ -70,52 +72,15 @@ export default async function DownloadPage({ params }: DownloadPageProps) {
     return notFound();
   }
 
-  // Fetch the file record - id IS the share_id
-  const { data: fileRecord, error } = await supabase
-    .from('shared_files')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Fetch the file record using Neon - id IS the share_id
+  const fileRecord = await db.getFileById(id) as FileRecord | null;
 
-  // If no record found, try to find by slug if applicable
-  if (error || !fileRecord) {
-    const { data: fileRecordBySlug } = await supabase
-      .from('shared_files')
-      .select('*')
-      .eq('slug', id)
-      .single();
-
-    if (!fileRecordBySlug) {
-      return notFound();
-    }
-
-    // Use the slug record
-    const fileRecordToUse = fileRecordBySlug;
-    // Use filename directly - it should be the display name
-    const displayFilename = fileRecordToUse.filename || fileRecordToUse.file_name || 'file';
-
-    const isExpired = isFileExpired(fileRecordToUse.expires_at);
-    const downloadLimitReached = fileRecordToUse.max_downloads 
-      ? fileRecordToUse.download_count >= fileRecordToUse.max_downloads 
-      : false;
-
-    const expiresAt = new Date(fileRecordToUse.expires_at);
-    const now = new Date();
-    const timeLeft = expiresAt.getTime() - now.getTime();
-
-    return (
-      <DownloadPageClient
-        fileRecord={fileRecordToUse}
-        displayFilename={displayFilename}
-        isExpired={isExpired}
-        downloadLimitReached={downloadLimitReached}
-        timeLeft={timeLeft}
-      />
-    );
+  if (!fileRecord) {
+    return notFound();
   }
 
   // Use filename directly - it should be the display name
-  const displayFilename = fileRecord.filename || fileRecord.file_name || 'file';
+  const displayFilename = fileRecord.file_name || 'file';
 
   const isExpired = isFileExpired(fileRecord.expires_at);
   const downloadLimitReached = fileRecord.max_downloads 

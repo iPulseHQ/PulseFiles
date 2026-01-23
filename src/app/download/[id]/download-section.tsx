@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 interface DownloadSectionProps {
@@ -16,7 +16,7 @@ interface DownloadSectionProps {
 }
 
 export default function DownloadSection({ shareId, accessControl, isFolder }: DownloadSectionProps) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [isDownloading, setIsDownloading] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
